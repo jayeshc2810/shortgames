@@ -1,0 +1,4312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Catan · Cities and Knights · Seafarers — Hot-seat Board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Alegreya+SC:wght@500;700&family=Archivo+Narrow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0f1f2b;
+  --ink-2:#17303f;
+  --ink-3:#1e3d50;
+  --chart:#ece0c8;
+  --chart-2:#dccdae;
+  --chart-3:#c8b58f;
+  --brown:#3f3020;
+  --brown-2:#6b563c;
+  --signal:#b3352a;
+  --brass:#c99a2e;
+  --sea:#123243;
+  --rule:rgba(63,48,32,.28);
+
+  --lumber:#3f6b4a;
+  --wool:#8aa95c;
+  --grain:#ddb44e;
+  --brick:#b76a45;
+  --ore:#8b8f99;
+  --desert:#ddd0ac;
+
+  --disp:"Alegreya SC","Palatino Linotype",Palatino,Georgia,serif;
+  --ui:"Archivo Narrow","Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{
+  margin:0;background:var(--ink);color:var(--chart);
+  font-family:var(--ui);font-size:15px;line-height:1.35;
+  -webkit-font-smoothing:antialiased;
+}
+button{font-family:inherit;font-size:inherit;cursor:pointer}
+button:focus-visible,select:focus-visible,input:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+
+/* ---------- shell ---------- */
+#app{display:flex;flex-direction:column;height:100%;min-height:100vh}
+header.bar{
+  display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  padding:8px 16px;background:var(--ink-2);
+  border-bottom:1px solid rgba(236,224,200,.16);
+}
+.brand{font-family:var(--disp);font-weight:700;letter-spacing:.08em;font-size:17px;color:var(--chart)}
+.brand span{color:var(--brass)}
+.mode-tag{
+  font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+  border:1px solid var(--brass);color:var(--brass);padding:2px 7px;border-radius:2px;
+}
+.bar .spacer{flex:1}
+.turnbox{display:flex;align-items:center;gap:9px;font-weight:600}
+.swatch{width:14px;height:14px;border-radius:2px;border:1px solid rgba(0,0,0,.5);display:inline-block;flex:none}
+
+.speedbox{display:flex;align-items:center;gap:6px;font-size:11px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--chart-3)}
+.speedbox select{
+  font-family:var(--ui);font-size:13px;letter-spacing:0;text-transform:none;
+  background:var(--ink-3);color:var(--chart);border:1px solid rgba(236,224,200,.3);
+  border-radius:3px;padding:4px 6px;
+}
+
+/* offer sheet */
+.offer{display:flex;gap:14px;align-items:stretch;margin:12px 0}
+.offer .side{flex:1;background:var(--chart-2);border:1px solid var(--rule);border-radius:3px;padding:9px 11px}
+.offer .side h3{margin:0 0 6px;font-family:var(--disp);font-size:12px;letter-spacing:.12em;color:var(--brown-2)}
+.offer .arrow{display:grid;place-items:center;font-size:20px;color:var(--brown-2)}
+
+/* barbarian rail — the signature element */
+.rail{display:flex;align-items:center;gap:8px}
+.rail-label{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--chart-3)}
+.rail-track{display:flex;align-items:center;gap:3px}
+.rail-node{
+  width:15px;height:15px;border-radius:50%;
+  border:1px solid rgba(236,224,200,.35);background:transparent;position:relative;
+}
+.rail-node.last{border-color:var(--signal);background:rgba(179,53,42,.22)}
+.rail-node.on{background:var(--signal);border-color:var(--signal);box-shadow:0 0 0 3px rgba(179,53,42,.25)}
+.rail-node.next{box-shadow:0 0 0 3px rgba(201,154,46,.45)}
+.rail-strength{font-size:12px;color:var(--chart-3);white-space:nowrap}
+.rail-strength b{color:var(--chart)}
+.speed{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--chart-3);
+  display:flex;align-items:center;gap:6px}
+.speed select{font-family:var(--ui);font-size:12px;letter-spacing:0;text-transform:none;
+  background:var(--ink-3);color:var(--chart);border:1px solid rgba(236,224,200,.3);
+  border-radius:2px;padding:3px 5px}
+
+/* ---------- main ---------- */
+main{flex:1;display:flex;min-height:0}
+.boardwrap{
+  flex:1;min-width:0;position:relative;
+  background:
+    radial-gradient(circle at 50% 42%, #17394b 0%, var(--sea) 55%, #0d2432 100%);
+  display:flex;align-items:center;justify-content:center;padding:10px;
+}
+#board{width:100%;height:100%;max-height:100%;display:block;touch-action:manipulation}
+
+.hint{
+  position:absolute;left:50%;transform:translateX(-50%);bottom:12px;
+  background:var(--chart);color:var(--brown);font-weight:600;
+  padding:7px 14px;border-radius:3px;box-shadow:0 3px 14px rgba(0,0,0,.45);
+  display:none;align-items:center;gap:12px;max-width:92%;
+}
+.hint.show{display:flex}
+.hint button{
+  background:var(--brown);color:var(--chart);border:0;padding:3px 9px;border-radius:2px;font-weight:600;
+}
+
+/* ---------- side panel ---------- */
+aside{
+  width:352px;flex:none;background:var(--chart);color:var(--brown);
+  display:flex;flex-direction:column;min-height:0;
+  border-left:1px solid rgba(0,0,0,.35);
+}
+.pane{padding:10px 13px;border-bottom:1px solid var(--rule)}
+.pane.grow{flex:1;min-height:0;display:flex;flex-direction:column}
+.eyebrow{
+  font-family:var(--disp);font-size:12px;letter-spacing:.14em;
+  color:var(--brown-2);margin:0 0 7px;font-weight:700;
+}
+
+/* hand */
+.cards{display:flex;flex-wrap:wrap;gap:5px}
+.card{
+  display:flex;align-items:center;gap:5px;
+  background:var(--chart-2);border:1px solid var(--rule);border-radius:3px;
+  padding:3px 7px;font-weight:600;font-size:13px;
+}
+.card .dot{width:10px;height:10px;border-radius:2px;flex:none}
+.card.zero{opacity:.34}
+.card.commodity{background:#e6dcc4;border-style:dashed}
+
+/* actions */
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.acts.one{grid-template-columns:1fr}
+.act{
+  text-align:left;background:var(--chart-2);border:1px solid var(--rule);
+  border-radius:3px;padding:6px 8px;color:var(--brown);line-height:1.15;
+}
+.act:hover:not(:disabled){background:#e6d8ba;border-color:var(--brown-2)}
+.act:disabled{opacity:.38;cursor:not-allowed}
+.act b{display:block;font-size:13px}
+.act small{font-size:11px;color:var(--brown-2);letter-spacing:.02em}
+.act.primary{background:var(--brown);color:var(--chart);border-color:var(--brown)}
+.act.primary small{color:var(--chart-3)}
+.act.primary:hover:not(:disabled){background:#2e2317}
+.act.danger{background:var(--signal);color:#fff;border-color:var(--signal)}
+.act.danger small{color:rgba(255,255,255,.72)}
+
+/* improvements */
+.imps{display:flex;flex-direction:column;gap:5px}
+.imp{display:flex;align-items:center;gap:8px}
+.imp .nm{width:58px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--brown-2);flex:none}
+.pips{display:flex;gap:3px;flex:1}
+.pip{height:11px;flex:1;border:1px solid var(--rule);border-radius:1px;background:transparent}
+.imp .cost{font-size:11px;color:var(--brown-2);width:34px;text-align:right;flex:none}
+
+/* knights */
+.knights{display:flex;flex-wrap:wrap;gap:5px}
+.kn{
+  display:flex;align-items:center;gap:5px;border:1px solid var(--rule);
+  border-radius:3px;padding:3px 7px;background:var(--chart-2);font-size:12px;font-weight:600;
+}
+.kn.active{background:#dfe9d3;border-color:#5c7a4a}
+.kn .st{font-family:var(--disp);font-weight:700}
+
+/* barbarian muster (Cities & Knights) */
+.muster{display:flex;flex-direction:column;gap:6px}
+.mrow{display:flex;align-items:center;gap:7px;font-size:12px}
+.mrow .nm{width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:none;font-weight:600}
+.mbar{flex:1;height:11px;background:#e3d6ba;border:1px solid var(--rule);border-radius:2px;overflow:hidden;display:flex}
+.mbar i{display:block;height:100%}
+.mrow .val{width:16px;text-align:right;font-weight:700;flex:none;font-family:var(--disp)}
+.mflag{font-size:9px;letter-spacing:.1em;text-transform:uppercase;border-radius:2px;padding:1px 4px;flex:none;font-weight:700}
+.mflag.def{background:#dfe9d3;color:#3d5c2d;border:1px solid #5c7a4a}
+.mflag.risk{background:rgba(179,53,42,.15);color:var(--signal);border:1px solid var(--signal)}
+.mnote{font-size:11px;color:var(--brown-2);margin:7px 0 0;line-height:1.3}
+.mnote b{color:var(--brown)}
+.mhead{display:flex;align-items:baseline;justify-content:space-between;gap:8px;font-size:11px;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--brown-2);margin-bottom:7px}
+.mhead .lead{font-family:var(--disp);font-size:15px;letter-spacing:.04em;color:var(--brown)}
+.mhead .lead.bad{color:var(--signal)}
+
+/* seafaring (Seafarers) */
+.sea-list{display:flex;flex-direction:column;gap:5px;font-size:12px}
+.sea-row{display:flex;align-items:center;gap:8px}
+.sea-row .k{flex:1;color:var(--brown-2);letter-spacing:.02em}
+.sea-row b{font-family:var(--disp);font-size:14px}
+.isles{display:flex;flex-wrap:wrap;gap:5px;margin-top:7px}
+.isle{border:1px solid var(--rule);border-radius:3px;padding:2px 7px;font-size:11px;
+  background:var(--chart-2);font-weight:600;color:var(--brown-2)}
+.isle.claimed{background:#dfe9d3;border-color:#5c7a4a;color:#3d5c2d}
+.isle.mine{background:var(--brown);border-color:var(--brown);color:var(--chart)}
+
+/* battle report */
+.battle{display:flex;flex-direction:column;gap:7px;margin:11px 0}
+.battle .side{display:flex;align-items:center;gap:9px}
+.battle .side .lab{width:92px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--brown-2);flex:none}
+.battle .side .bar{flex:1;height:16px;background:#e3d6ba;border:1px solid var(--rule);border-radius:2px;overflow:hidden;display:flex}
+.battle .side .bar i{display:block;height:100%}
+.battle .side .num{width:22px;text-align:right;font-family:var(--disp);font-weight:700;font-size:16px;flex:none}
+.verdict{font-family:var(--disp);font-size:16px;letter-spacing:.05em;margin:12px 0 4px}
+.verdict.win{color:#3d5c2d}
+.verdict.lose{color:var(--signal)}
+
+/* log */
+.log{
+  flex:1;overflow-y:auto;font-size:13px;
+  background:#e3d6ba;border:1px solid var(--rule);border-radius:3px;padding:7px 9px;
+}
+.log p{margin:0 0 4px;padding-left:13px;text-indent:-13px}
+.log p::before{content:"·  ";color:var(--brown-2)}
+.log p.hi{font-weight:700}
+.log p.bad{color:var(--signal);font-weight:600}
+
+/* scoreboard */
+.score{display:flex;flex-direction:column;gap:4px}
+.row{
+  display:flex;align-items:center;gap:8px;font-size:13px;
+  padding:3px 5px;border-radius:3px;
+}
+.row.turn{background:var(--chart-2);font-weight:700}
+.row .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .mini{font-size:11px;color:var(--brown-2);letter-spacing:.03em}
+.tag{font-size:10px;letter-spacing:.12em;text-transform:uppercase;border:1px solid var(--rule);
+  border-radius:2px;padding:1px 4px;color:var(--brown-2);flex:none}
+.row .vp{font-family:var(--disp);font-weight:700;font-size:15px;min-width:22px;text-align:right}
+
+/* dice */
+.dice{display:flex;align-items:center;gap:7px}
+.die{
+  width:34px;height:34px;border-radius:5px;display:grid;place-items:center;
+  font-family:var(--disp);font-weight:700;font-size:19px;
+  border:1px solid rgba(0,0,0,.35);
+}
+.die.yellow{background:#e6cf8a;color:#3f3020}
+.die.red{background:#b3352a;color:#fff}
+.die.event{background:#0f1f2b;color:#fff;font-size:12px;letter-spacing:.06em;text-align:center;line-height:1.05;padding:2px}
+.die.event.trade{background:#c9a227;color:#2a2110}
+.die.event.politics{background:#3d6fa8;color:#fff}
+.die.event.science{background:#4a8a5c;color:#fff}
+
+/* ---------- modal ---------- */
+.scrim{
+  position:fixed;inset:0;background:rgba(8,18,25,.78);
+  display:none;align-items:center;justify-content:center;padding:16px;z-index:50;
+}
+.scrim.show{display:flex}
+.modal{
+  background:var(--chart);color:var(--brown);border-radius:4px;
+  width:min(560px,100%);max-height:88vh;overflow-y:auto;
+  box-shadow:0 18px 60px rgba(0,0,0,.6);
+}
+.modal h2{
+  font-family:var(--disp);font-size:18px;letter-spacing:.06em;margin:0;
+  padding:13px 17px;border-bottom:1px solid var(--rule);
+}
+.modal .body{padding:15px 17px}
+.modal .foot{
+  padding:11px 17px;border-top:1px solid var(--rule);
+  display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;
+}
+.btn{
+  background:var(--chart-2);border:1px solid var(--rule);color:var(--brown);
+  padding:7px 14px;border-radius:3px;font-weight:600;
+}
+.btn:hover:not(:disabled){background:#e6d8ba}
+.btn.primary{background:var(--brown);color:var(--chart);border-color:var(--brown)}
+.btn.primary:hover:not(:disabled){background:#2e2317}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.muted{color:var(--brown-2);font-size:13px}
+
+.picker{display:flex;flex-wrap:wrap;gap:7px;margin:9px 0}
+.pick{
+  display:flex;align-items:center;gap:6px;background:var(--chart-2);
+  border:1px solid var(--rule);border-radius:3px;padding:6px 10px;font-weight:600;
+}
+.pick:hover:not(:disabled){background:#e6d8ba}
+.pick.sel{background:var(--brown);color:var(--chart);border-color:var(--brown)}
+.pick:disabled{opacity:.35;cursor:not-allowed}
+
+.counter{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 0}
+.counter .lab{display:flex;align-items:center;gap:7px;font-weight:600}
+.stepper{display:flex;align-items:center;gap:6px}
+.stepper button{
+  width:26px;height:26px;border-radius:3px;border:1px solid var(--rule);
+  background:var(--chart-2);color:var(--brown);font-weight:700;line-height:1;
+}
+.stepper span{min-width:20px;text-align:center;font-weight:700}
+
+.plist{display:flex;flex-direction:column;gap:6px}
+.pbtn{
+  display:flex;align-items:center;gap:9px;text-align:left;width:100%;
+  background:var(--chart-2);border:1px solid var(--rule);border-radius:3px;padding:8px 11px;color:var(--brown);
+}
+.pbtn:hover:not(:disabled){background:#e6d8ba}
+.pbtn:disabled{opacity:.35;cursor:not-allowed}
+.pbtn .nm{flex:1;font-weight:700}
+
+.pcards{display:flex;flex-direction:column;gap:7px}
+.pcard{
+  text-align:left;border:1px solid var(--rule);border-radius:3px;padding:9px 11px;
+  background:var(--chart-2);color:var(--brown);width:100%;
+}
+.pcard:hover:not(:disabled){background:#e6d8ba}
+.pcard b{display:block;font-family:var(--disp);letter-spacing:.05em;font-size:14px}
+.pcard small{display:block;font-size:12px;color:var(--brown-2);margin-top:2px;line-height:1.3}
+.pcard .flag{font-size:10px;letter-spacing:.14em;text-transform:uppercase;font-weight:700}
+.pcard.trade .flag{color:#9a7716}
+.pcard.politics .flag{color:#2f5985}
+.pcard.science .flag{color:#3a6c48}
+.pcard.dev .flag{color:var(--brown-2)}
+
+.setup-grid{display:flex;flex-direction:column;gap:9px;margin:12px 0}
+.setup-row{display:flex;align-items:center;gap:9px}
+.setup-row .seg button{padding:5px 10px;font-size:12px}
+.setup-row input[type=text]{
+  flex:1;padding:6px 9px;border:1px solid var(--rule);border-radius:3px;
+  background:#f2e9d6;color:var(--brown);font-family:inherit;font-size:14px;
+}
+.seg{display:flex;gap:0;border:1px solid var(--rule);border-radius:3px;overflow:hidden;flex-wrap:wrap}
+.seg button{background:var(--chart-2);border:0;padding:7px 13px;color:var(--brown);font-weight:600}
+.seg button.on{background:var(--brown);color:var(--chart)}
+
+.rulesbox{
+  background:#e3d6ba;border:1px solid var(--rule);border-radius:3px;
+  padding:9px 11px;font-size:13px;margin-top:10px;
+}
+.rulesbox a{color:#7a4a1e}
+
+table.costs{width:100%;border-collapse:collapse;font-size:13px}
+table.costs th,table.costs td{text-align:left;padding:3px 6px;border-bottom:1px solid var(--rule)}
+table.costs th{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--brown-2)}
+
+/* ---------- responsive ---------- */
+@media (max-width:900px){
+  main{flex-direction:column}
+  aside{width:100%;max-height:52vh;border-left:0;border-top:1px solid rgba(0,0,0,.35)}
+  .boardwrap{min-height:44vh}
+  header.bar{gap:10px;padding:7px 11px}
+  .rail-label{display:none}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none!important;animation:none!important}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="bar">
+    <div class="brand" id="brand">CATAN</div>
+    <div class="mode-tag" id="modeTag">BASE</div>
+    <div class="turnbox"><span class="swatch" id="turnSwatch"></span><span id="turnName">—</span></div>
+    <div class="dice" id="diceBox"></div>
+    <div class="spacer"></div>
+    <div class="rail" id="railBox"></div>
+    <label class="speedbox" for="speed"><span>Bots</span>
+      <select id="speed">
+        <option value="900">Slow</option>
+        <option value="480" selected>Normal</option>
+        <option value="160">Fast</option>
+        <option value="0">Instant</option>
+      </select></label>
+    <label class="speed" id="speedWrap">Bots
+      <select id="botSpeed">
+        <option value="900">Slow</option>
+        <option value="480" selected>Normal</option>
+        <option value="180">Fast</option>
+        <option value="0">Instant</option>
+      </select>
+    </label>
+    <button class="btn" id="btnRules" style="padding:5px 11px">Rules &amp; costs</button>
+    <button class="btn" id="btnNew" style="padding:5px 11px">New game</button>
+  </header>
+  <main>
+    <div class="boardwrap">
+      <svg id="board" viewBox="0 0 820 720" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Catan board"></svg>
+      <div class="hint" id="hint"><span id="hintText"></span><button id="hintCancel">Cancel</button></div>
+    </div>
+    <aside>
+      <div class="pane">
+        <p class="eyebrow" id="handTitle">HAND</p>
+        <div class="cards" id="hand"></div>
+      </div>
+      <div class="pane" id="impPane">
+        <p class="eyebrow">CITY IMPROVEMENTS</p>
+        <div class="imps" id="imps"></div>
+      </div>
+      <div class="pane" id="knPane">
+        <p class="eyebrow">KNIGHTS</p>
+        <div class="knights" id="knights"></div>
+      </div>
+      <div class="pane" id="barbPane">
+        <p class="eyebrow">BARBARIAN MUSTER</p>
+        <div class="muster" id="muster"></div>
+      </div>
+      <div class="pane" id="seaPane">
+        <p class="eyebrow">SEAFARING</p>
+        <div class="sea-list" id="seaBox"></div>
+      </div>
+      <div class="pane">
+        <p class="eyebrow">ACTIONS</p>
+        <div class="acts" id="acts"></div>
+      </div>
+      <div class="pane grow">
+        <p class="eyebrow">LOG</p>
+        <div class="log" id="log"></div>
+      </div>
+      <div class="pane">
+        <p class="eyebrow">STANDINGS</p>
+        <div class="score" id="score"></div>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<div class="scrim" id="scrim"><div class="modal" id="modal"></div></div>
+<script>
+"use strict";
+/* ============================================================
+   Catan + Cities & Knights — hot-seat implementation.
+   Original code. Rules follow the official Catan and
+   Cities & Knights rulebooks; no artwork or text is reproduced.
+   ============================================================ */
+
+/* ---------- static data ---------- */
+const RES = ["lumber", "brick", "wool", "grain", "ore"];
+const COM = ["paper", "cloth", "coin"];
+const ALLCARDS = RES.concat(COM);
+
+const CARDCOLOR = {
+  lumber: "#3f6b4a", brick: "#b76a45", wool: "#8aa95c",
+  grain: "#ddb44e", ore: "#8b8f99",
+  paper: "#4a8a5c", cloth: "#c9a227", coin: "#3d6fa8"
+};
+
+const TERRAIN = {
+  forest:    { res: "lumber", com: "paper", label: "Forest",    fill: "#3f6b4a" },
+  hills:     { res: "brick",  com: null,    label: "Hills",     fill: "#b76a45" },
+  pasture:   { res: "wool",   com: "cloth", label: "Pasture",   fill: "#8aa95c" },
+  fields:    { res: "grain",  com: null,    label: "Fields",    fill: "#ddb44e" },
+  mountains: { res: "ore",    com: "coin",  label: "Mountains", fill: "#8b8f99" },
+  desert:    { res: null,     com: null,    label: "Desert",    fill: "#ddd0ac" },
+  gold:      { res: null,     com: null,    label: "Gold Field",fill: "#e0b93f", gold: true },
+  sea:       { res: null,     com: null,    label: "Sea",       fill: "#16394c", water: true }
+};
+
+const TILE_BAG = [
+  "forest","forest","forest","forest",
+  "pasture","pasture","pasture","pasture",
+  "fields","fields","fields","fields",
+  "hills","hills","hills",
+  "mountains","mountains","mountains",
+  "desert"
+];
+const NUMBER_BAG = [2,3,3,4,4,5,5,6,6,8,8,9,9,10,10,11,11,12];
+
+const PORT_BAG = ["any","any","any","any","lumber","brick","wool","grain","ore"];
+
+const COST = {
+  road:       { lumber: 1, brick: 1 },
+  ship:       { lumber: 1, wool: 1 },
+  settlement: { lumber: 1, brick: 1, wool: 1, grain: 1 },
+  city:       { ore: 3, grain: 2 },
+  dev:        { ore: 1, wool: 1, grain: 1 },
+  knight:     { ore: 1, wool: 1 },
+  promote:    { ore: 1, wool: 1 },
+  activate:   { grain: 1 },
+  wall:       { brick: 2 }
+};
+
+const IMPROVE = {
+  trade:    { com: "cloth", color: "#c9a227", label: "Trade",
+              names: ["Market","Merchant Guild","Trading House","Bank","Great Exchange"] },
+  politics: { com: "coin",  color: "#3d6fa8", label: "Politics",
+              names: ["Town Hall","Church","Fortress","Cathedral","High Assembly"] },
+  science:  { com: "paper", color: "#4a8a5c", label: "Science",
+              names: ["Abbey","Library","Aqueduct","Theater","University"] }
+};
+const TRACKS = ["trade","politics","science"];
+
+const PLAYER_COLORS = [
+  { name: "Vermilion", hex: "#c0392b" },
+  { name: "Cobalt",    hex: "#2b6cb0" },
+  { name: "Saffron",   hex: "#d98324" },
+  { name: "Bone",      hex: "#e8e2d4" }
+];
+
+/* Base-game development cards */
+const DEV_BAG = (() => {
+  const a = [];
+  for (let i = 0; i < 14; i++) a.push("knight");
+  for (let i = 0; i < 5;  i++) a.push("vp");
+  for (let i = 0; i < 2;  i++) a.push("roadBuilding");
+  for (let i = 0; i < 2;  i++) a.push("yearOfPlenty");
+  for (let i = 0; i < 2;  i++) a.push("monopoly");
+  return a;
+})();
+
+const DEV_INFO = {
+  knight:       { title: "Knight",        text: "Move the robber and steal 1 card from a player next to it. Counts toward Largest Army." },
+  vp:           { title: "Victory Point", text: "Worth 1 victory point. Kept hidden until you win." },
+  roadBuilding: { title: "Road Building", text: "Build 2 roads at no cost." },
+  yearOfPlenty: { title: "Year of Plenty",text: "Take any 2 resources from the bank." },
+  monopoly:     { title: "Monopoly",      text: "Name a resource; every opponent hands you all they hold of it." }
+};
+
+/* Cities & Knights progress cards */
+const PROG = {
+  // Science (paper / green)
+  alchemist:       { deck: "science",  n: 2, title: "Alchemist",        text: "Play before rolling: choose both production dice. The event die is still rolled and resolved first." },
+  crane:           { deck: "science",  n: 2, title: "Crane",            text: "One city improvement you build this turn costs 1 commodity less." },
+  engineer:        { deck: "science",  n: 1, title: "Engineer",         text: "Build 1 city wall for free." },
+  inventor:        { deck: "science",  n: 2, title: "Inventor",         text: "Swap 2 number tokens on the board. Not 2, 6, 8 or 12." },
+  irrigation:      { deck: "science",  n: 2, title: "Irrigation",       text: "Take 2 grain for each fields hex next to one of your settlements or cities." },
+  medicine:        { deck: "science",  n: 2, title: "Medicine",         text: "Upgrade one settlement to a city for 2 ore and 1 grain." },
+  mining:          { deck: "science",  n: 2, title: "Mining",           text: "Take 2 ore for each mountains hex next to one of your settlements or cities." },
+  printer:         { deck: "science",  n: 1, title: "Printer",          text: "1 victory point. Revealed at once when drawn." },
+  roadBuildingP:   { deck: "science",  n: 2, title: "Road Building",    text: "Build 2 roads at no cost." },
+  smith:           { deck: "science",  n: 2, title: "Smith",            text: "Promote up to 2 of your knights one level each, free." },
+  // Politics (coin / blue)
+  bishop:          { deck: "politics", n: 2, title: "Bishop",           text: "Move the robber, then draw 1 random card from every player with a building next to its new hex." },
+  constitution:    { deck: "politics", n: 1, title: "Constitution",     text: "1 victory point. Revealed at once when drawn." },
+  deserter:        { deck: "politics", n: 2, title: "Deserter",         text: "An opponent removes a knight of their choice. You may place one of equal strength." },
+  diplomat:        { deck: "politics", n: 2, title: "Diplomat",         text: "Remove any open road. If it is yours, rebuild it elsewhere for free." },
+  intrigue:        { deck: "politics", n: 2, title: "Intrigue",         text: "Displace an opponent's knight standing on an intersection touched by your roads." },
+  saboteur:        { deck: "politics", n: 2, title: "Saboteur",         text: "Every player with at least as many victory points as you discards half their cards." },
+  spy:             { deck: "politics", n: 3, title: "Spy",              text: "Look at an opponent's progress cards and take one." },
+  warlord:         { deck: "politics", n: 2, title: "Warlord",          text: "Activate all of your knights for free." },
+  wedding:         { deck: "politics", n: 2, title: "Wedding",          text: "Every player with more victory points than you gives you 2 cards of their choice." },
+  // Trade (cloth / yellow)
+  commercialHarbor:{ deck: "trade",    n: 2, title: "Commercial Harbor",text: "Offer each opponent 1 resource; each must return a commodity of their choice." },
+  masterMerchant:  { deck: "trade",    n: 2, title: "Master Merchant",  text: "Look at the hand of an opponent with more victory points and take 2 cards." },
+  merchant:        { deck: "trade",    n: 6, title: "Merchant",         text: "Place the merchant on a land hex next to your building. Trade that resource 2:1, and hold 1 victory point." },
+  merchantFleet:   { deck: "trade",    n: 2, title: "Merchant Fleet",   text: "For the rest of this turn, trade one chosen resource or commodity 2:1 with the bank." },
+  resourceMonopoly:{ deck: "trade",    n: 4, title: "Resource Monopoly",text: "Name a resource; each opponent gives you 2 of it." },
+  tradeMonopoly:   { deck: "trade",    n: 2, title: "Trade Monopoly",   text: "Name a commodity; each opponent gives you 1 of it." }
+};
+const VP_PROG = ["printer", "constitution"];
+
+const EVENT_FACES = ["barbarian","barbarian","barbarian","trade","politics","science"];
+const BARB_TRACK = 7;
+
+/* ---------- Seafarers: heading for new shores ----------
+   A 7 x 9 field of open sea with the home island carved out of it and two
+   small islands off the east coast. Rows alternate a half-hex offset, so the
+   home island keeps the familiar 3-4-5-4-3 silhouette.                     */
+const SF_ROWS = 7, SF_COLS = 9;
+const SF_MAIN = { 1: [2,3,4], 2: [2,3,4,5], 3: [1,2,3,4,5], 4: [2,3,4,5], 5: [2,3,4] };
+const SF_ISLES = [
+  { name: "North Isle", cells: [[1,7],[2,7]], tiles: ["gold","mountains"], nums: [4,10] },
+  { name: "South Isle", cells: [[4,7],[5,7]], tiles: ["gold","forest"],    nums: [5,9]  }
+];
+const SF_PIRATE_START = [3, 7];   // the strait between the two isles
+const SHIPS_PER_PLAYER = 15;
+
+/* ---------- helpers ---------- */
+function shuffle(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+const d6 = () => 1 + Math.floor(Math.random() * 6);
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+const sum = a => a.reduce((x, y) => x + y, 0);
+
+/* ---------- board geometry ----------
+   Pointy-top hexes laid out in rows of 3,4,5,4,3.
+   Vertices and edges are derived from hex corners and de-duplicated,
+   which yields the standard 54 intersections and 72 edges.        */
+let HEX_R = 58;
+let HEX_W = Math.sqrt(3) * HEX_R;
+let HEX_VS = 1.5 * HEX_R;
+let ART = 1;                       // drawing scale, 1 at the classic hex size
+const BOARD_CX = 410, BOARD_CY = 360;
+
+function setHexSize(r) {
+  HEX_R = r;
+  HEX_W = Math.sqrt(3) * r;
+  HEX_VS = 1.5 * r;
+  ART = r / 58;
+}
+
+function hexCorner(cx, cy, i) {
+  const a = ((60 * i - 90) * Math.PI) / 180;
+  return [cx + HEX_R * Math.cos(a), cy + HEX_R * Math.sin(a)];
+}
+const key = (x, y) => Math.round(x) + ":" + Math.round(y);
+
+/* A cell is { row, col, x, y, water }; the geometry pass does the rest. */
+function classicCells() {
+  const rows = [3, 4, 5, 4, 3];
+  const out = [];
+  rows.forEach((n, r) => {
+    const y = BOARD_CY + (r - 2) * HEX_VS;
+    const x0 = BOARD_CX - ((n - 1) / 2) * HEX_W;
+    for (let c = 0; c < n; c++) out.push({ row: r, col: c, x: x0 + c * HEX_W, y, water: false });
+  });
+  return out;
+}
+
+function seafarerCells() {
+  const raw = [];
+  for (let r = 0; r < SF_ROWS; r++) {
+    const off = (r % 2) ? 0.5 : 0;
+    for (let c = 0; c < SF_COLS; c++) {
+      const land = (SF_MAIN[r] || []).indexOf(c) >= 0 ||
+        SF_ISLES.some(i => i.cells.some(p => p[0] === r && p[1] === c));
+      raw.push({ row: r, col: c, gx: c + off, gy: r, water: !land });
+    }
+  }
+  const xs = raw.map(o => o.gx), ys = raw.map(o => o.gy);
+  const mx = (Math.min.apply(null, xs) + Math.max.apply(null, xs)) / 2;
+  const my = (Math.min.apply(null, ys) + Math.max.apply(null, ys)) / 2;
+  raw.forEach(o => {
+    o.x = BOARD_CX + (o.gx - mx) * HEX_W;
+    o.y = BOARD_CY + (o.gy - my) * HEX_VS;
+  });
+  return raw;
+}
+
+function buildGeometry(cells) {
+  const hexes = [];
+  cells.forEach(c => hexes.push({
+    id: hexes.length, row: c.row, col: c.col, x: c.x, y: c.y,
+    type: c.water ? "sea" : null, water: !!c.water, island: null,
+    num: null, vertices: [], edges: []
+  }));
+
+  const vmap = new Map(), vertices = [];
+  const emap = new Map(), edges = [];
+
+  hexes.forEach(h => {
+    const corners = [];
+    for (let i = 0; i < 6; i++) {
+      const [x, y] = hexCorner(h.x, h.y, i);
+      const k = key(x, y);
+      let vi = vmap.get(k);
+      if (vi === undefined) {
+        vi = vertices.length;
+        vmap.set(k, vi);
+        vertices.push({ id: vi, x, y, hexes: [], edges: [], adj: [], building: null, knight: null, port: null });
+      }
+      corners.push(vi);
+      if (!vertices[vi].hexes.includes(h.id)) vertices[vi].hexes.push(h.id);
+      h.vertices.push(vi);
+    }
+    for (let i = 0; i < 6; i++) {
+      const a = corners[i], b = corners[(i + 1) % 6];
+      const k = a < b ? a + "-" + b : b + "-" + a;
+      let ei = emap.get(k);
+      if (ei === undefined) {
+        ei = edges.length;
+        emap.set(k, ei);
+        edges.push({
+          id: ei, a, b, road: null, hexes: [],
+          x: (vertices[a].x + vertices[b].x) / 2,
+          y: (vertices[a].y + vertices[b].y) / 2
+        });
+        vertices[a].edges.push(ei); vertices[b].edges.push(ei);
+        if (!vertices[a].adj.includes(b)) vertices[a].adj.push(b);
+        if (!vertices[b].adj.includes(a)) vertices[b].adj.push(a);
+      }
+      if (!edges[ei].hexes.includes(h.id)) edges[ei].hexes.push(h.id);
+      h.edges.push(ei);
+    }
+  });
+
+  return { hexes, vertices, edges };
+}
+
+/* Land hexes sharing an edge form an island; every land hex gets a label. */
+function labelIslands(geo) {
+  let next = 0;
+  geo.hexes.forEach(h => {
+    if (h.water || h.island !== null) return;
+    const id = next++;
+    const stack = [h];
+    h.island = id;
+    while (stack.length) {
+      const cur = stack.pop();
+      cur.edges.forEach(ei => {
+        geo.edges[ei].hexes.forEach(hid => {
+          const n = geo.hexes[hid];
+          if (n.water || n.island !== null) return;
+          n.island = id;
+          stack.push(n);
+        });
+      });
+    }
+  });
+  geo.islandCount = next;
+  const size = {};
+  geo.hexes.forEach(h => { if (!h.water) size[h.island] = (size[h.island] || 0) + 1; });
+  let main = 0;
+  Object.keys(size).forEach(k => { if (size[k] > (size[main] || 0)) main = +k; });
+  geo.mainIsland = main;
+  return geo;
+}
+
+/* Edges with land on exactly one side — the coastline. */
+function coastEdges(geo, islandId) {
+  return geo.edges.filter(e => {
+    const land = e.hexes.map(h => geo.hexes[h]).filter(h => !h.water);
+    if (land.length !== 1) return false;
+    return islandId === undefined || land[0].island === islandId;
+  });
+}
+
+/* Coastal edges ordered around an island, used to seat the harbors. */
+function perimeterEdges(geo, islandId) {
+  const outer = coastEdges(geo, islandId);
+  let cx = BOARD_CX, cy = BOARD_CY;
+  if (islandId !== undefined) {
+    const land = geo.hexes.filter(h => !h.water && h.island === islandId);
+    cx = sum(land.map(h => h.x)) / land.length;
+    cy = sum(land.map(h => h.y)) / land.length;
+  }
+  outer.sort((p, q) => Math.atan2(p.y - cy, p.x - cx) - Math.atan2(q.y - cy, q.x - cx));
+  return outer;
+}
+
+/* Nine harbour seats spread around a coastline. */
+function seatPorts(geo, ring) {
+  const gaps = [3, 3, 4, 3, 3, 4, 3, 4, 3];
+  const bag = shuffle(PORT_BAG.slice());
+  const ports = [];
+  let idx = 0;
+  for (let i = 0; i < 9; i++) {
+    const e = ring[idx % ring.length];
+    const kind = bag[i];
+    ports.push({ edge: e.id, kind, x: e.x, y: e.y });
+    geo.vertices[e.a].port = kind;
+    geo.vertices[e.b].port = kind;
+    idx += gaps[i];
+  }
+  geo.ports = ports;
+  return geo;
+}
+
+function makeBoard(mode) {
+  if (mode === "sf") return makeSeaBoard();
+  setHexSize(58);
+  const geo = labelIslands(buildGeometry(classicCells()));
+  const tiles = shuffle(TILE_BAG.slice());
+  const nums = shuffle(NUMBER_BAG.slice());
+  let ni = 0;
+  geo.hexes.forEach((h, i) => {
+    h.type = tiles[i];
+    h.num = h.type === "desert" ? null : nums[ni++];
+  });
+  geo.isles = [];
+  return seatPorts(geo, perimeterEdges(geo));
+}
+
+/* The Seafarers board: home island, open sea, two small islands. */
+function makeSeaBoard() {
+  setHexSize(42);
+  const geo = labelIslands(buildGeometry(seafarerCells()));
+  const at = (r, c) => geo.hexes.filter(h => h.row === r && h.col === c)[0];
+
+  const home = geo.hexes.filter(h => !h.water && h.island === geo.mainIsland);
+  const tiles = shuffle(TILE_BAG.slice());
+  const nums = shuffle(NUMBER_BAG.slice());
+  let ni = 0;
+  home.forEach((h, i) => {
+    h.type = tiles[i];
+    h.num = h.type === "desert" ? null : nums[ni++];
+  });
+
+  geo.isles = [];
+  SF_ISLES.forEach(spec => {
+    const t = shuffle(spec.tiles.slice()), n = shuffle(spec.nums.slice());
+    let id = null, cx = 0, cy = 0;
+    spec.cells.forEach((rc, j) => {
+      const h = at(rc[0], rc[1]);
+      h.type = t[j];
+      h.num = n[j];
+      id = h.island;
+      cx += h.x; cy += h.y;
+    });
+    geo.isles.push({ name: spec.name, island: id, x: cx / spec.cells.length, y: cy / spec.cells.length });
+  });
+
+  const pirate = at(SF_PIRATE_START[0], SF_PIRATE_START[1]);
+  geo.pirateStart = pirate ? pirate.id : geo.hexes.filter(h => h.water)[0].id;
+  return seatPorts(geo, perimeterEdges(geo, geo.mainIsland));
+}
+
+function makePlayer(i, name) {
+  return {
+    id: i,
+    name: name || "Player " + (i + 1),
+    color: PLAYER_COLORS[i].hex,
+    colorName: PLAYER_COLORS[i].name,
+    res: { lumber: 0, brick: 0, wool: 0, grain: 0, ore: 0 },
+    com: { paper: 0, cloth: 0, coin: 0 },
+    roadsLeft: 15, shipsLeft: SHIPS_PER_PLAYER,
+    settlementsLeft: 5, citiesLeft: 4, wallsLeft: 3,
+    dev: [], devBoughtThisTurn: [], playedKnights: 0, devPlayedThisTurn: false,
+    prog: [],
+    vpCards: 0,          // Defender of Catan + Printer + Constitution
+    imp: { trade: 0, politics: 0, science: 0 },
+    metros: [],          // list of track names owned
+    knightsPlaced: [],   // vertex ids
+    knightUsedPromote: [],
+    hasMerchant: false,
+    turnFlags: {}
+  };
+}
+/* ============================================================
+   Game state and rule helpers
+   ============================================================ */
+
+const G = {
+  mode: "base",           // "base" | "ck" | "sf"
+  players: [],
+  cur: 0,
+  phase: "setup1",        // setup1 | setup2 | roll | main | over
+  geo: null,
+  robber: null,
+  pirate: null,
+  merchantHex: null,
+  merchantOwner: null,
+  dev: [],
+  progDecks: { trade: [], politics: [], science: [] },
+  barb: 0,
+  barbAttacked: false,
+  dice: [null, null],
+  eventDie: null,
+  longestRoad: null,
+  largestArmy: null,
+  setupOrder: [],
+  setupStep: 0,
+  setupPlaced: null,
+  pending: null,          // { kind, ... } — awaiting a board click
+  log: [],
+  winner: null,
+  target: 10
+};
+
+/* ---------- mode, terrain and coastline helpers ---------- */
+const isCK = () => G.mode === "ck";
+const isSF = () => G.mode === "sf";
+
+function robberTargets() { return G.geo.hexes.filter(h => !h.water && h.id !== G.robber).map(h => h.id); }
+function pirateTargets() { return G.geo.hexes.filter(h => h.water && h.id !== G.pirate).map(h => h.id); }
+function edgeHasLand(e) { return e.hexes.some(hid => !G.geo.hexes[hid].water); }
+function edgeHasSea(e)  { return e.hexes.some(hid => G.geo.hexes[hid].water); }
+function vertexOnLand(v) { return v.hexes.some(hid => !G.geo.hexes[hid].water); }
+function routeWord() { return isSF() ? "longest trade route" : "longest road"; }
+function isleName(id) {
+  const m = (G.geo.isles || []).filter(i => i.island === id)[0];
+  return m ? m.name : "the home island";
+}
+/* islands, other than the home island, where a player has a building */
+function newIslandsOf(p) {
+  const out = [];
+  G.geo.vertices.forEach(v => {
+    if (!v.building || v.building.p !== p.id) return;
+    v.hexes.forEach(hid => {
+      const h = G.geo.hexes[hid];
+      if (h.water || h.island === G.geo.mainIsland) return;
+      if (out.indexOf(h.island) < 0) out.push(h.island);
+    });
+  });
+  return out;
+}
+
+/* ---------- card bookkeeping ---------- */
+function hasCard(p, k) { return (k in p.res) ? p.res[k] : p.com[k]; }
+function addCard(p, k, n) {
+  if (n === undefined) n = 1;
+  if (k in p.res) p.res[k] = Math.max(0, p.res[k] + n);
+  else p.com[k] = Math.max(0, p.com[k] + n);
+}
+function handCount(p) { return sum(RES.map(r => p.res[r])) + sum(COM.map(c => p.com[c])); }
+function handList(p) {
+  const a = [];
+  RES.forEach(r => { for (let i = 0; i < p.res[r]; i++) a.push(r); });
+  COM.forEach(c => { for (let i = 0; i < p.com[c]; i++) a.push(c); });
+  return a;
+}
+function canPay(p, cost) { return Object.keys(cost).every(k => hasCard(p, k) >= cost[k]); }
+function pay(p, cost) { Object.keys(cost).forEach(k => addCard(p, k, -cost[k])); }
+function costText(cost) {
+  return Object.keys(cost).map(k => cost[k] + " " + k).join(", ");
+}
+
+function handLimit(p) {
+  if (G.mode !== "ck") return 7;
+  let walls = 0;
+  G.geo.vertices.forEach(v => {
+    if (v.building && v.building.p === p.id && v.building.wall) walls++;
+  });
+  return 7 + walls * 2;
+}
+
+/* ---------- victory points ---------- */
+function publicVP(p) {
+  let vp = 0;
+  G.geo.vertices.forEach(v => {
+    if (!v.building || v.building.p !== p.id) return;
+    vp += v.building.type === "city" ? 2 : 1;
+    if (v.building.metro) vp += 2;
+  });
+  if (G.longestRoad === p.id) vp += 2;
+  if (!isCK() && G.largestArmy === p.id) vp += 2;
+  if (isCK()) {
+    vp += p.vpCards;
+    if (p.hasMerchant) vp += 1;
+  }
+  if (isSF()) vp += 2 * newIslandsOf(p).length;   // first settlement on each new island
+  return vp;
+}
+function totalVP(p) {
+  let vp = publicVP(p);
+  if (!isCK()) vp += p.dev.filter(d => d === "vp").length;
+  return vp;
+}
+
+/* ---------- board queries ---------- */
+function ownsBuildingAt(v, pid) { return v.building && v.building.p === pid; }
+
+function vertexOpen(vid) {
+  const v = G.geo.vertices[vid];
+  if (v.building) return false;
+  return v.adj.every(a => !G.geo.vertices[a].building);
+}
+
+function playerTouchesVertex(vid, pid) {
+  const v = G.geo.vertices[vid];
+  if (ownsBuildingAt(v, pid)) return true;
+  return v.edges.some(e => G.geo.edges[e].road === pid);
+}
+
+function legalSettlementSpots(pid, setup) {
+  const out = [];
+  G.geo.vertices.forEach(v => {
+    if (!vertexOpen(v.id)) return;
+    if (v.knight) return;
+    if (isSF()) {
+      if (!vertexOnLand(v)) return;                       // no settling open water
+      // the opening pieces are placed on the home island
+      if (setup && !v.hexes.some(hid => {
+        const h = G.geo.hexes[hid];
+        return !h.water && h.island === G.geo.mainIsland;
+      })) return;
+    }
+    if (!setup) {
+      const linked = v.edges.some(e => G.geo.edges[e].road === pid);
+      if (!linked) return;
+    }
+    out.push(v.id);
+  });
+  return out;
+}
+
+function legalRoadSpots(pid, fromVertex) {
+  const out = [];
+  G.geo.edges.forEach(e => {
+    if (e.road !== null) return;
+    if (isSF() && !edgeHasLand(e)) return;                // roads keep to the land
+    if (fromVertex !== undefined && fromVertex !== null) {
+      if (e.a === fromVertex || e.b === fromVertex) out.push(e.id);
+      return;
+    }
+    const ok = [e.a, e.b].some(v => {
+      const vx = G.geo.vertices[v];
+      if (vx.building && vx.building.p === pid) return true;
+      if (vx.building && vx.building.p !== pid) return false;
+      if (vx.knight && vx.knight.p !== pid) return false;
+      return vx.edges.some(ei => G.geo.edges[ei].road === pid);
+    });
+    if (ok) out.push(e.id);
+  });
+  return out;
+}
+
+/* Ships run along any edge touching water, out from your own coastal
+   buildings or from the end of a shipping route you already own.       */
+function legalShipSpots(pid, fromVertex) {
+  if (!isSF()) return [];
+  const out = [];
+  G.geo.edges.forEach(e => {
+    if (e.road !== null) return;
+    if (!edgeHasSea(e)) return;
+    if (G.pirate !== null && e.hexes.indexOf(G.pirate) >= 0) return;
+    if (fromVertex !== undefined && fromVertex !== null) {
+      if (e.a === fromVertex || e.b === fromVertex) out.push(e.id);
+      return;
+    }
+    const ok = [e.a, e.b].some(vid => {
+      const v = G.geo.vertices[vid];
+      if (v.building) return v.building.p === pid;        // routes change hands at a building
+      if (v.knight && v.knight.p !== pid) return false;
+      return v.edges.some(ei => G.geo.edges[ei].road === pid && G.geo.edges[ei].ship);
+    });
+    if (ok) out.push(e.id);
+  });
+  return out;
+}
+
+/* An open ship sits at the loose end of a route and may be re-sailed. */
+function openShipsOf(pid) {
+  return G.geo.edges.filter(e => {
+    if (e.road !== pid || !e.ship || e.newShip) return false;
+    return [e.a, e.b].some(vid => {
+      const v = G.geo.vertices[vid];
+      if (v.building && v.building.p === pid) return false;
+      return !v.edges.some(ei => ei !== e.id && G.geo.edges[ei].road === pid && G.geo.edges[ei].ship);
+    });
+  }).map(e => e.id);
+}
+
+function legalCitySpots(pid) {
+  return G.geo.vertices
+    .filter(v => v.building && v.building.p === pid && v.building.type === "settlement")
+    .map(v => v.id);
+}
+
+function legalKnightSpots(pid) {
+  const out = [];
+  G.geo.vertices.forEach(v => {
+    if (v.building || v.knight) return;
+    const linked = v.edges.some(e => G.geo.edges[e].road === pid);
+    if (linked) out.push(v.id);
+  });
+  return out;
+}
+
+/* Vertices reachable along a player's own roads, stopping at blockers. */
+function roadReachable(pid, startV) {
+  const seen = new Set([startV]);
+  const stack = [startV];
+  const out = [];
+  while (stack.length) {
+    const cur = stack.pop();
+    G.geo.vertices[cur].edges.forEach(ei => {
+      const e = G.geo.edges[ei];
+      if (e.road !== pid) return;
+      const nxt = e.a === cur ? e.b : e.a;
+      if (seen.has(nxt)) return;
+      seen.add(nxt);
+      out.push(nxt);
+      const v = G.geo.vertices[nxt];
+      const blocked = (v.building && v.building.p !== pid) || (v.knight && v.knight.p !== pid);
+      if (!blocked) stack.push(nxt);
+    });
+  }
+  return out;
+}
+
+/* ---------- longest road ---------- */
+function longestRoadFor(pid) {
+  const owned = G.geo.edges.filter(e => e.road === pid);
+  if (!owned.length) return 0;
+  let best = 0;
+  const blockedAt = v => {
+    const vx = G.geo.vertices[v];
+    if (vx.building && vx.building.p !== pid) return true;
+    if (vx.knight && vx.knight.p !== pid) return true;
+    return false;
+  };
+  /* In Seafarers a route may only change between road and ship at one of
+     your own settlements or cities, so carry the last leg's type along. */
+  const walk = (v, used, wasShip) => {
+    if (used.size > best) best = used.size;
+    if (blockedAt(v)) return;
+    const vx = G.geo.vertices[v];
+    const junction = !!(vx.building && vx.building.p === pid);
+    vx.edges.forEach(ei => {
+      const e = G.geo.edges[ei];
+      if (e.road !== pid || used.has(ei)) return;
+      if (isSF() && !!e.ship !== wasShip && !junction) return;
+      used.add(ei);
+      walk(e.a === v ? e.b : e.a, used, !!e.ship);
+      used.delete(ei);
+    });
+  };
+  owned.forEach(e => {
+    walk(e.a, new Set([e.id]), !!e.ship);
+    walk(e.b, new Set([e.id]), !!e.ship);
+  });
+  return best;
+}
+
+function refreshLongestRoad() {
+  const lens = G.players.map(p => longestRoadFor(p.id));
+  const best = Math.max.apply(null, lens);
+  const holder = G.longestRoad;
+  if (best < 5) {
+    if (holder !== null) { G.longestRoad = null; note("The " + routeWord() + " falls below 5 and is vacant."); }
+    return;
+  }
+  const leaders = lens.map((l, i) => [l, i]).filter(x => x[0] === best).map(x => x[1]);
+  if (holder !== null && leaders.includes(holder)) return;   // holder keeps it on a tie
+  if (leaders.length === 1) {
+    G.longestRoad = leaders[0];
+    note(G.players[leaders[0]].name + " takes the " + routeWord() + " (" + best + ").", "hi");
+  } else if (holder !== null) {
+    G.longestRoad = null;
+    note("The " + routeWord() + " is tied and goes unclaimed.");
+  }
+}
+
+function refreshLargestArmy() {
+  if (isCK()) return;
+  let best = 2, who = G.largestArmy;
+  if (who !== null) best = G.players[who].playedKnights;
+  G.players.forEach(p => {
+    if (p.playedKnights >= 3 && p.playedKnights > best) { best = p.playedKnights; who = p.id; }
+  });
+  if (who !== G.largestArmy) {
+    G.largestArmy = who;
+    note(G.players[who].name + " takes the largest army (" + best + ").", "hi");
+  }
+}
+
+/* ---------- production ---------- */
+function produce(total) {
+  const gained = G.players.map(() => ({}));
+  const gold = G.players.map(() => 0);
+  G.geo.hexes.forEach(h => {
+    if (h.num !== total) return;
+    if (h.id === G.robber) return;
+    const t = TERRAIN[h.type];
+    if (t.gold) {
+      h.vertices.forEach(vid => {
+        const v = G.geo.vertices[vid];
+        if (!v.building) return;
+        gold[v.building.p] += v.building.type === "city" ? 2 : 1;
+      });
+      return;
+    }
+    if (!t.res) return;
+    h.vertices.forEach(vid => {
+      const v = G.geo.vertices[vid];
+      if (!v.building) return;
+      const p = G.players[v.building.p];
+      const bag = gained[p.id];
+      const give = (k, n) => { bag[k] = (bag[k] || 0) + n; addCard(p, k, n); };
+      if (v.building.type === "settlement") {
+        give(t.res, 1);
+      } else {
+        if (isCK()) {
+          if (t.com) { give(t.res, 1); give(t.com, 1); }
+          else give(t.res, 2);
+        } else {
+          give(t.res, 2);
+        }
+      }
+    });
+  });
+  G.players.forEach(p => {
+    const bag = gained[p.id];
+    const keys = Object.keys(bag);
+    if (keys.length) {
+      note(p.name + " collects " + keys.map(k => bag[k] + " " + k).join(", ") + ".");
+    } else if (isCK() && p.imp.science >= 3 && !gold[p.id]) {
+      p.aqueductDue = true;
+    }
+  });
+  return { gained, gold };
+}
+
+/* Gold fields pay out in whatever the owner asks for. */
+function runGoldQueue(gold, done) {
+  const queue = [];
+  for (let i = 0; i < G.players.length; i++) {
+    const p = G.players[(G.cur + i) % G.players.length];
+    if (gold[p.id] > 0) queue.push(p);
+  }
+  const step = () => {
+    if (!queue.length) { done(); return; }
+    const p = queue.shift();
+    const n = gold[p.id];
+    pickCards("Gold field — " + p.name,
+      "Your gold fields pay out. Take any " + n + " resource" + (n > 1 ? "s" : "") + " from the bank.",
+      RES, n, picked => {
+        picked.forEach(k => addCard(p, k, 1));
+        note(p.name + " pans " + picked.join(", ") + " from the gold fields.");
+        step();
+      }, { actor: p });
+  };
+  step();
+}
+
+/* ---------- log ---------- */
+function note(text, cls) {
+  G.log.push({ text, cls: cls || "" });
+  if (G.log.length > 300) G.log.shift();
+}
+/* ============================================================
+   Rendering
+   ============================================================ */
+const SVGNS = "http://www.w3.org/2000/svg";
+const el = (n, attrs, parent) => {
+  const e = document.createElementNS(SVGNS, n);
+  if (attrs) for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+};
+const $ = id => document.getElementById(id);
+
+function pipDots(n) {
+  const p = 6 - Math.abs(7 - n);
+  return "•".repeat(p);
+}
+
+function drawBoard() {
+  const svg = $("board");
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+  if (!G.geo) return;
+
+  const defs = el("defs", null, svg);
+  const hatch = el("pattern", { id: "sea", width: 14, height: 14, patternUnits: "userSpaceOnUse", patternTransform: "rotate(35)" }, defs);
+  el("rect", { width: 14, height: 14, fill: "none" }, hatch);
+  el("line", { x1: 0, y1: 0, x2: 0, y2: 14, stroke: "rgba(236,224,200,.07)", "stroke-width": 1.4 }, hatch);
+  el("rect", { x: 0, y: 0, width: 820, height: 720, fill: "url(#sea)" }, svg);
+
+  // compass rose, quiet decoration anchored to the chart idea
+  const rose = el("g", { transform: "translate(755,70)", opacity: ".3" }, svg);
+  el("circle", { r: 26, fill: "none", stroke: "var(--chart)", "stroke-width": 1 }, rose);
+  el("circle", { r: 19, fill: "none", stroke: "var(--chart)", "stroke-width": .5 }, rose);
+  el("path", { d: "M0,-26 L6,0 L0,26 L-6,0 Z", fill: "var(--chart)", opacity: ".65" }, rose);
+  el("path", { d: "M-26,0 L0,-5 L26,0 L0,5 Z", fill: "var(--chart)", opacity: ".35" }, rose);
+  const nlab = el("text", { y: -32, "text-anchor": "middle", fill: "var(--chart)", "font-size": 11, "font-family": "var(--disp)" }, rose);
+  nlab.textContent = "N";
+
+  const gPorts = el("g", null, svg);
+  const gHex   = el("g", null, svg);
+  const gEdge  = el("g", null, svg);
+  const gVert  = el("g", null, svg);
+  const gHi    = el("g", null, svg);
+
+  // ---- harbors ----
+  G.geo.ports.forEach(pt => {
+    const e = G.geo.edges[pt.edge];
+    const h = G.geo.hexes[e.hexes[0]];
+    const dx = pt.x - h.x, dy = pt.y - h.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const px = pt.x + (dx / len) * 30 * ART, py = pt.y + (dy / len) * 30 * ART;
+    el("line", { x1: pt.x, y1: pt.y, x2: px, y2: py, stroke: "rgba(236,224,200,.35)", "stroke-width": 1.5, "stroke-dasharray": "3 3" }, gPorts);
+    el("circle", { cx: px, cy: py, r: 15 * ART, fill: "#0c1e29", stroke: pt.kind === "any" ? "rgba(236,224,200,.6)" : CARDCOLOR[pt.kind], "stroke-width": 2 }, gPorts);
+    const t1 = el("text", { x: px, y: py - 1 * ART, "text-anchor": "middle", "font-size": 9 * ART, "font-weight": 700, fill: "var(--chart)" }, gPorts);
+    t1.textContent = pt.kind === "any" ? "3:1" : "2:1";
+    if (pt.kind !== "any") {
+      const t2 = el("text", { x: px, y: py + 8 * ART, "text-anchor": "middle", "font-size": 7 * ART, fill: CARDCOLOR[pt.kind], "letter-spacing": ".5" }, gPorts);
+      t2.textContent = pt.kind.slice(0, 4).toUpperCase();
+    }
+  });
+
+  // ---- hexes ----
+  G.geo.hexes.forEach(h => {
+    const t = TERRAIN[h.type];
+    const pts = [];
+    for (let i = 0; i < 6; i++) pts.push(hexCorner(h.x, h.y, i).map(v => v.toFixed(1)).join(","));
+    const poly = el("polygon", {
+      points: pts.join(" "),
+      fill: t.fill,
+      stroke: h.water ? "rgba(236,224,200,.13)" : "#0e2029",
+      "stroke-width": h.water ? 1 : 2, "stroke-linejoin": "round"
+    }, gHex);
+    poly.style.cursor = G.pending && G.pending.hexes && G.pending.hexes.includes(h.id) ? "pointer" : "default";
+    poly.addEventListener("click", () => onHexClick(h.id));
+
+    if (h.water) {
+      const ww = HEX_R * 0.46;
+      [-0.3, 0.14].forEach(dy => {
+        const yy = h.y + dy * HEX_R;
+        el("path", {
+          d: "M" + (h.x - ww) + "," + yy + " q" + (ww / 2) + ",-3.4 " + ww + ",0 t" + ww + ",0",
+          fill: "none", stroke: "rgba(236,224,200,.13)", "stroke-width": 1.2
+        }, gHex);
+      });
+      return;
+    }
+
+    if (t.gold) {
+      [[-0.30, -0.10], [0.26, -0.16], [0.02, 0.30]].forEach(o => {
+        const gx = h.x + o[0] * HEX_R, gy = h.y + o[1] * HEX_R;
+        el("path", {
+          d: "M" + gx + "," + (gy - 5 * ART) + " L" + (gx + 4 * ART) + "," + gy +
+             " L" + gx + "," + (gy + 5 * ART) + " L" + (gx - 4 * ART) + "," + gy + " Z",
+          fill: "rgba(255,247,214,.55)"
+        }, gHex);
+      });
+    }
+
+    const lab = el("text", {
+      x: h.x, y: h.y - HEX_R * 0.58, "text-anchor": "middle",
+      "font-size": 9 * ART, "letter-spacing": 1.5 * ART,
+      fill: t.gold ? "rgba(52,36,6,.72)" : "rgba(15,31,43,.55)", "font-weight": 600
+    }, gHex);
+    lab.textContent = t.label.toUpperCase();
+
+    if (h.num !== null) {
+      const hot = h.num === 6 || h.num === 8;
+      el("circle", { cx: h.x, cy: h.y + 6 * ART, r: 17 * ART, fill: "#efe6d0", stroke: "#0e2029", "stroke-width": 1.5 }, gHex);
+      const tn = el("text", {
+        x: h.x, y: h.y + 9 * ART, "text-anchor": "middle",
+        "font-size": 17 * ART, "font-weight": 700, "font-family": "var(--disp)",
+        fill: hot ? "#b3352a" : "#20303a"
+      }, gHex);
+      tn.textContent = h.num;
+      const pp = el("text", {
+        x: h.x, y: h.y + 19 * ART, "text-anchor": "middle", "font-size": 8 * ART,
+        fill: hot ? "#b3352a" : "#5c6a72"
+      }, gHex);
+      pp.textContent = pipDots(h.num);
+    }
+
+    if (G.robber === h.id) {
+      const g = el("g", { transform: "translate(" + (h.x - 22 * ART) + "," + (h.y - 4 * ART) + ") scale(" + ART + ")" }, gHex);
+      el("ellipse", { cx: 0, cy: 12, rx: 9, ry: 4, fill: "rgba(0,0,0,.3)" }, g);
+      el("path", { d: "M0,-14 C7,-14 9,-7 8,0 C7,7 6,11 0,11 C-6,11 -7,7 -8,0 C-9,-7 -7,-14 0,-14 Z", fill: "#181818", stroke: "#000", "stroke-width": 1 }, g);
+      el("circle", { cx: -3, cy: -6, r: 1.4, fill: "#d9c8a5" }, g);
+      el("circle", { cx: 3, cy: -6, r: 1.4, fill: "#d9c8a5" }, g);
+    }
+    if (isCK() && G.merchantHex === h.id) {
+      const owner = G.merchantOwner !== null ? G.players[G.merchantOwner].color : "#fff";
+      const g = el("g", { transform: "translate(" + (h.x + 22 * ART) + "," + (h.y + 2 * ART) + ") scale(" + ART + ")" }, gHex);
+      el("path", { d: "M0,-13 L8,10 L-8,10 Z", fill: owner, stroke: "#0e2029", "stroke-width": 1.4 }, g);
+      const tm = el("text", { y: 6, "text-anchor": "middle", "font-size": 9, "font-weight": 700, fill: "#0e2029" }, g);
+      tm.textContent = "M";
+    }
+  });
+
+  // ---- island names and the pirate (Seafarers) ----
+  if (isSF()) {
+    (G.geo.isles || []).forEach(i => {
+      const t = el("text", {
+        x: i.x, y: i.y - HEX_R * 1.5, "text-anchor": "middle",
+        "font-size": 11, "letter-spacing": 2.4, "font-family": "var(--disp)",
+        fill: "rgba(236,224,200,.62)"
+      }, gHex);
+      t.textContent = i.name.toUpperCase();
+    });
+    if (G.pirate !== null) {
+      const h = G.geo.hexes[G.pirate];
+      const g = el("g", { transform: "translate(" + h.x + "," + h.y + ") scale(" + ART + ")" }, gHex);
+      el("ellipse", { cx: 0, cy: 17, rx: 21, ry: 5, fill: "rgba(0,0,0,.35)" }, g);
+      el("path", { d: "M-20,5 L20,5 L14,16 L-14,16 Z", fill: "#141414", stroke: "#000", "stroke-width": 1.2, "stroke-linejoin": "round" }, g);
+      el("line", { x1: 0, y1: 5, x2: 0, y2: -24, stroke: "#141414", "stroke-width": 2.6 }, g);
+      el("path", { d: "M0,-24 L17,-15 L0,-6 Z", fill: "#141414", stroke: "#3a3a3a", "stroke-width": 1 }, g);
+      el("circle", { cx: 6, cy: -16, r: 2.6, fill: "#e8e2d4" }, g);
+      const t = el("text", { y: 32, "text-anchor": "middle", "font-size": 9, "letter-spacing": 1.6, fill: "rgba(236,224,200,.7)" }, g);
+      t.textContent = "PIRATE";
+    }
+  }
+
+  // ---- barbarian approach lane (Cities & Knights) ----
+  if (isCK()) drawBarbarianLane(svg);
+
+  // ---- roads and shipping lanes ----
+  G.geo.edges.forEach(e => {
+    const a = G.geo.vertices[e.a], b = G.geo.vertices[e.b];
+    if (e.road === null) return;
+    const c = G.players[e.road].color;
+    if (e.ship) {
+      el("line", { x1: a.x, y1: a.y, x2: b.x, y2: b.y, stroke: "rgba(236,224,200,.28)",
+        "stroke-width": 2 * ART, "stroke-dasharray": (5 * ART) + " " + (4 * ART), "stroke-linecap": "round" }, gEdge);
+      let ang = Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI;
+      if (ang > 90) ang -= 180;
+      if (ang < -90) ang += 180;
+      const g = el("g", {
+        transform: "translate(" + ((a.x + b.x) / 2) + "," + ((a.y + b.y) / 2) +
+          ") rotate(" + ang.toFixed(1) + ") scale(" + ART + ")"
+      }, gEdge);
+      el("path", { d: "M-13,3 L13,3 L9,11 L-9,11 Z", fill: c, stroke: "#0e2029", "stroke-width": 1.4, "stroke-linejoin": "round" }, g);
+      el("line", { x1: 0, y1: 3, x2: 0, y2: -13, stroke: "#0e2029", "stroke-width": 1.7 }, g);
+      el("path", { d: "M0.8,-13 L10,-1 L0.8,-1 Z", fill: "#f2e9d6", stroke: "#0e2029", "stroke-width": 1.1, "stroke-linejoin": "round" }, g);
+      return;
+    }
+    el("line", { x1: a.x, y1: a.y, x2: b.x, y2: b.y, stroke: "#0e2029", "stroke-width": 11 * ART, "stroke-linecap": "round" }, gEdge);
+    el("line", { x1: a.x, y1: a.y, x2: b.x, y2: b.y, stroke: c, "stroke-width": 7 * ART, "stroke-linecap": "round" }, gEdge);
+  });
+
+  // ---- buildings and knights ----
+  G.geo.vertices.forEach(v => {
+    if (v.building) {
+      const c = G.players[v.building.p].color;
+      const g = el("g", { transform: "translate(" + v.x + "," + v.y + ") scale(" + ART + ")" }, gVert);
+      if (v.building.wall) {
+        el("rect", { x: -16, y: -4, width: 32, height: 12, rx: 2, fill: "#7a6c58", stroke: "#0e2029", "stroke-width": 1.3 }, g);
+      }
+      if (v.building.type === "settlement") {
+        el("path", { d: "M-9,4 L-9,-3 L0,-10 L9,-3 L9,4 Z", fill: c, stroke: "#0e2029", "stroke-width": 1.6, "stroke-linejoin": "round" }, g);
+      } else {
+        el("path", { d: "M-13,6 L-13,-4 L-5,-10 L-5,-3 L13,-3 L13,6 Z", fill: c, stroke: "#0e2029", "stroke-width": 1.6, "stroke-linejoin": "round" }, g);
+      }
+      if (v.building.metro) {
+        el("path", { d: "M-9,-8 L-9,-16 L-5,-16 L-5,-12 L-2,-12 L-2,-16 L2,-16 L2,-12 L5,-12 L5,-16 L9,-16 L9,-8 Z", fill: IMPROVE[v.building.metro].color, stroke: "#0e2029", "stroke-width": 1.3, "stroke-linejoin": "round" }, g);
+      }
+    }
+    if (v.knight) {
+      const c = G.players[v.knight.p].color;
+      const g = el("g", { transform: "translate(" + v.x + "," + v.y + ") scale(" + ART + ")" }, gVert);
+      el("circle", { r: 11, fill: c, stroke: v.knight.active ? "#f2e9d6" : "#0e2029", "stroke-width": v.knight.active ? 2.6 : 1.6 }, g);
+      el("circle", { r: 7, fill: "none", stroke: "rgba(14,32,41,.55)", "stroke-width": 1 }, g);
+      const t = el("text", { y: 4, "text-anchor": "middle", "font-size": 11, "font-weight": 700, "font-family": "var(--disp)", fill: "#0e2029" }, g);
+      t.textContent = v.knight.str;
+      if (!v.knight.active) {
+        el("line", { x1: -11, y1: 11, x2: 11, y2: -11, stroke: "rgba(14,32,41,.45)", "stroke-width": 2 }, g);
+      }
+    }
+  });
+
+  // ---- pending-action highlights ----
+  const P = G.pending;
+  if (P) {
+    (P.vertices || []).forEach(vid => {
+      const v = G.geo.vertices[vid];
+      const c = el("circle", { cx: v.x, cy: v.y, r: 13 * ART, fill: "rgba(201,154,46,.28)", stroke: "#c99a2e", "stroke-width": 2.5 }, gHi);
+      c.style.cursor = "pointer";
+      c.addEventListener("click", ev => { ev.stopPropagation(); onVertexClick(vid); });
+    });
+    (P.edges || []).forEach(eid => {
+      const e = G.geo.edges[eid];
+      const a = G.geo.vertices[e.a], b = G.geo.vertices[e.b];
+      const l = el("line", { x1: a.x, y1: a.y, x2: b.x, y2: b.y, stroke: "#c99a2e", "stroke-width": 9 * ART, "stroke-linecap": "round", opacity: ".62" }, gHi);
+      l.style.cursor = "pointer";
+      l.addEventListener("click", ev => { ev.stopPropagation(); onEdgeClick(eid); });
+    });
+    (P.hexes || []).forEach(hid => {
+      const h = G.geo.hexes[hid];
+      const pts = [];
+      for (let i = 0; i < 6; i++) pts.push(hexCorner(h.x, h.y, i).map(v => v.toFixed(1)).join(","));
+      const poly = el("polygon", { points: pts.join(" "), fill: "rgba(201,154,46,.3)", stroke: "#c99a2e", "stroke-width": 3 }, gHi);
+      poly.style.cursor = "pointer";
+      poly.addEventListener("click", ev => { ev.stopPropagation(); onHexClick(hid); });
+    });
+  }
+}
+
+/* The barbarian ship, drawn in the empty sea to the west of Catan.
+   Seven berths: the ship advances one on every barbarian face and the
+   seventh is landfall.                                                */
+function drawBarbarianLane(parent) {
+  const x = 74, y0 = 138, gap = 58;
+  const g = el("g", null, parent);
+
+  const head = el("text", {
+    x, y: 100, "text-anchor": "middle", "font-size": 10, "letter-spacing": 2.2,
+    "font-family": "var(--disp)", fill: "var(--chart-3)"
+  }, g);
+  head.textContent = "BARBARIAN SEA";
+
+  el("line", {
+    x1: x, y1: y0 - 24, x2: x, y2: y0 + gap * 6 + 26,
+    stroke: "rgba(236,224,200,.2)", "stroke-width": 1.2, "stroke-dasharray": "4 6"
+  }, g);
+
+  for (let i = 1; i <= BARB_TRACK; i++) {
+    const cy = y0 + (i - 1) * gap;
+    const reached = i <= G.barb;
+    const shore = i === BARB_TRACK;
+    el("circle", {
+      cx: x, cy, r: shore ? 13 : 9,
+      fill: reached ? "#b3352a" : "rgba(10,26,36,.7)",
+      stroke: shore ? "#b3352a" : "rgba(236,224,200,.38)",
+      "stroke-width": shore ? 2.4 : 1.3
+    }, g);
+    if (shore) {
+      const t = el("text", {
+        x, y: cy + 4, "text-anchor": "middle", "font-size": 12,
+        "font-weight": 700, "font-family": "var(--disp)", fill: reached ? "#fff" : "#b3352a"
+      }, g);
+      t.textContent = "!";
+    }
+  }
+
+  const sy = G.barb === 0 ? y0 - 38 : y0 + (G.barb - 1) * gap;
+  const ship = el("g", { transform: "translate(" + x + "," + sy + ")" }, g);
+  el("path", { d: "M-15,3 L15,3 L10,12 L-10,12 Z", fill: "#141414", stroke: "#000", "stroke-width": 1.2, "stroke-linejoin": "round" }, ship);
+  el("line", { x1: 0, y1: 3, x2: 0, y2: -17, stroke: "#141414", "stroke-width": 2.2 }, ship);
+  el("path", { d: "M0,-17 L13,-8 L0,-2 Z", fill: "#b3352a", stroke: "#0e2029", "stroke-width": 1, "stroke-linejoin": "round" }, ship);
+
+  if (G.barb === BARB_TRACK - 1) {
+    const w = el("text", {
+      x, y: y0 + gap * 6 + 46, "text-anchor": "middle", "font-size": 9,
+      "letter-spacing": 1.4, "font-weight": 700, fill: "#b3352a"
+    }, g);
+    w.textContent = "ONE SHIP FROM LANDFALL";
+  }
+
+  const atk = barbarianStrength(), def = knightStrengthTotal();
+  [["ATTACK", atk, "#b3352a"], ["KNIGHTS", def, def >= atk ? "#7fb069" : "#c99a2e"]]
+    .forEach((row, i) => {
+      const yy = y0 + gap * 6 + 70 + i * 18;
+      const a = el("text", { x: x - 4, y: yy, "text-anchor": "end", "font-size": 9, "letter-spacing": 1.3, fill: "var(--chart-3)" }, g);
+      a.textContent = row[0];
+      const b = el("text", { x: x + 6, y: yy, "font-size": 14, "font-weight": 700, "font-family": "var(--disp)", fill: row[2] }, g);
+      b.textContent = row[1];
+    });
+}
+
+/* ---------- side panel ---------- */
+function cardChip(k, n, commodity) {
+  return '<span class="card' + (n ? "" : " zero") + (commodity ? " commodity" : "") + '">' +
+    '<span class="dot" style="background:' + CARDCOLOR[k] + '"></span>' + cap(k) + " " + n + "</span>";
+}
+
+function drawPanel() {
+  const p = G.players[G.cur];
+  $("brand").innerHTML = isCK() ? 'CATAN <span>&amp;</span> CITIES AND KNIGHTS'
+    : isSF() ? 'CATAN <span>&amp;</span> SEAFARERS' : "CATAN";
+  $("modeTag").textContent = isCK() ? "CITIES & KNIGHTS" : isSF() ? "SEAFARERS" : "BASE GAME";
+  $("turnSwatch").style.background = p.color;
+  $("turnName").textContent = p.name + (isAI(p) ? " (bot)" : "") + " · " + totalVP(p) + " VP";
+  $("handTitle").textContent = "HAND — " + p.name.toUpperCase() +
+    " (" + handCount(p) + "/" + handLimit(p) + ")";
+
+  let h = RES.map(r => cardChip(r, p.res[r], false)).join("");
+  if (isCK()) h += COM.map(c => cardChip(c, p.com[c], true)).join("");
+  if (!isCK()) {
+    const vpN = p.dev.filter(d => d === "vp").length;
+    const playN = playableDev(p).length;
+    const held = p.dev.length;
+    h += '<span class="card" style="background:#e9dcc0;border-style:dashed">Dev cards ' + held +
+      (vpN ? " · " + vpN + " VP" : "") +
+      (held ? " · " + playN + " playable" : "") + "</span>";
+  }
+  $("hand").innerHTML = h;
+
+  // dice
+  let dh = "";
+  if (G.dice[0]) {
+    dh += '<div class="die yellow">' + G.dice[0] + "</div>";
+    dh += '<div class="die red">' + G.dice[1] + "</div>";
+  }
+  if (isCK() && G.eventDie) {
+    const lab = G.eventDie === "barbarian" ? "SHIP" : G.eventDie.slice(0, 4).toUpperCase();
+    dh += '<div class="die event ' + (G.eventDie === "barbarian" ? "" : G.eventDie) + '">' + lab + "</div>";
+  }
+  $("diceBox").innerHTML = dh;
+
+  // barbarian rail
+  if (isCK()) {
+    let nodes = "";
+    for (let i = 1; i <= BARB_TRACK; i++) {
+      nodes += '<div class="rail-node' + (i === BARB_TRACK ? " last" : "") +
+        (i <= G.barb ? " on" : "") + (i === G.barb + 1 ? " next" : "") + '"></div>';
+    }
+    const str = G.geo ? barbarianStrength() : 0;
+    const def = G.geo ? knightStrengthTotal() : 0;
+    $("railBox").innerHTML =
+      '<span class="rail-label">Barbarians</span>' +
+      '<div class="rail-track">' + nodes + "</div>" +
+      '<span class="rail-strength">attack <b>' + str + "</b> · knights <b>" + def + "</b></span>";
+  } else {
+    $("railBox").innerHTML = "";
+  }
+
+  // improvements
+  $("barbPane").style.display = isCK() ? "" : "none";
+  $("seaPane").style.display = isSF() ? "" : "none";
+  if (isCK()) drawMuster();
+  if (isSF()) drawSeaPane();
+  if (isCK()) {
+    $("impPane").style.display = "";
+    $("knPane").style.display = "";
+    $("imps").innerHTML = TRACKS.map(t => {
+      const lvl = p.imp[t];
+      let pips = "";
+      for (let i = 1; i <= 5; i++) {
+        pips += '<div class="pip" style="background:' + (i <= lvl ? IMPROVE[t].color : "transparent") + '"></div>';
+      }
+      const nextCost = lvl < 5 ? lvl + 1 + " " + IMPROVE[t].com : "max";
+      const owns = p.metros.includes(t) ? " ★" : "";
+      return '<div class="imp"><span class="nm">' + IMPROVE[t].label + owns + '</span>' +
+        '<div class="pips">' + pips + "</div>" +
+        '<span class="cost">' + nextCost + "</span></div>";
+    }).join("");
+
+    const ks = p.knightsPlaced.map(vid => {
+      const k = G.geo.vertices[vid].knight;
+      if (!k) return "";
+      const nm = k.str === 1 ? "Basic" : k.str === 2 ? "Strong" : "Mighty";
+      return '<span class="kn' + (k.active ? " active" : "") + '"><span class="st">' + k.str + "</span>" +
+        nm + (k.active ? " · ready" : " · idle") + "</span>";
+    }).join("");
+    $("knights").innerHTML = ks || '<span class="muted">No knights on the board.</span>';
+  } else {
+    $("impPane").style.display = "none";
+    $("knPane").style.display = "none";
+  }
+
+  $("speedWrap").style.display = G.players.some(isAI) ? "" : "none";
+
+  drawActions();
+
+  $("log").innerHTML = G.log.slice(-90).map(l => '<p class="' + l.cls + '">' + esc(l.text) + "</p>").join("");
+  $("log").scrollTop = $("log").scrollHeight;
+
+  $("score").innerHTML = G.players.map(pl => {
+    const bits = [];
+    if (G.longestRoad === pl.id) bits.push(routeWord());
+    if (!isCK() && G.largestArmy === pl.id) bits.push("largest army");
+    if (isCK() && pl.hasMerchant) bits.push("merchant");
+    if (isCK() && pl.metros.length) bits.push(pl.metros.length + " metropolis");
+    if (isCK() && pl.vpCards) bits.push(pl.vpCards + " VP card" + (pl.vpCards > 1 ? "s" : ""));
+    if (isSF()) {
+      const isl = newIslandsOf(pl).length;
+      if (isl) bits.push(isl + " new island" + (isl > 1 ? "s" : ""));
+    }
+    const cards = isCK() ? pl.prog.length + " progress" : pl.dev.length + " dev";
+    return '<div class="row' + (pl.id === G.cur ? " turn" : "") + '">' +
+      '<span class="swatch" style="background:' + pl.color + '"></span>' +
+      '<span class="nm">' + pl.name + (isAI(pl) ? ' <span class="tag">bot</span>' : "") + '<span class="mini"> — ' + handCount(pl) + " cards, " + cards +
+      (bits.length ? " · " + bits.join(", ") : "") + "</span></span>" +
+      '<span class="vp">' + publicVP(pl) + "</span></div>";
+  }).join("");
+
+  // hint bar
+  if (G.pending && G.pending.hint) {
+    $("hintText").textContent = G.pending.hint;
+    $("hint").classList.add("show");
+    $("hintCancel").style.display = G.pending.mandatory ? "none" : "";
+  } else {
+    $("hint").classList.remove("show");
+  }
+}
+
+/* Who is holding the line, and who the barbarians would take a city from. */
+function drawMuster() {
+  const atk = barbarianStrength();
+  const per = G.players.map(pl => knightStrengthOf(pl.id));
+  const def = sum(per);
+  const best = Math.max.apply(null, per);
+  const held = def >= atk;
+  const sackable = G.players.filter(pl => G.geo.vertices.some(v =>
+    v.building && v.building.p === pl.id && v.building.type === "city" && !v.building.metro)).map(pl => pl.id);
+  const low = sackable.length ? Math.min.apply(null, sackable.map(id => per[id])) : -1;
+  const scale = Math.max(atk, def, 1);
+
+  let h = '<div class="mhead"><span>attack ' + atk + " · defence " + def + "</span>" +
+    '<span class="lead' + (held ? "" : " bad") + '">' + (held ? "Catan holds" : "Catan falls") + "</span></div>";
+
+  h += G.players.map((pl, i) => {
+    const flag = held
+      ? (per[i] === best && best > 0 && per.filter(x => x === best).length === 1
+          ? '<span class="mflag def">defender</span>' : "")
+      : (sackable.indexOf(pl.id) >= 0 && per[i] === low ? '<span class="mflag risk">at risk</span>' : "");
+    return '<div class="mrow"><span class="swatch" style="background:' + pl.color + '"></span>' +
+      '<span class="nm">' + esc(pl.name) + "</span>" +
+      '<span class="mbar"><i style="width:' + Math.round(per[i] / scale * 100) + '%;background:' + pl.color + '"></i></span>' +
+      flag + '<span class="val">' + per[i] + "</span></div>";
+  }).join("");
+
+  h += '<p class="mnote">The ship moves one berth on every barbarian face and lands on the ' + BARB_TRACK +
+    "th. Attack strength is <b>one per city on the board</b>; defence counts <b>active knights only</b>. " +
+    (held
+      ? "The single strongest court is named Defender of Catan; a tie draws progress cards instead."
+      : "The weakest court loses a city to the sack — a city carrying a metropolis is spared.") + "</p>";
+  $("muster").innerHTML = h;
+}
+
+/* Ships, lanes, the pirate and the race for the smaller islands. */
+function drawSeaPane() {
+  const p = cur();
+  const blocked = G.pirate === null ? 0 :
+    G.geo.hexes[G.pirate].edges.filter(eid => edgeHasSea(G.geo.edges[eid])).length;
+  const rows = [
+    ["Ships in reserve", p.shipsLeft + " of " + SHIPS_PER_PLAYER],
+    ["Roads in reserve", p.roadsLeft + " of 15"],
+    ["Ship may still sail", p.turnFlags.shipMoved ? "spent this turn" : (openShipsOf(p.id).length ? "yes" : "no open ship")],
+    ["Longest trade route", G.longestRoad === null ? "unclaimed" : esc(G.players[G.longestRoad].name)],
+    ["Pirate", G.pirate === null ? "off the board" : blocked + " lanes closed"]
+  ];
+  let h = rows.map(r => '<div class="sea-row"><span class="k">' + r[0] + "</span><b>" + r[1] + "</b></div>").join("");
+
+  const chips = (G.geo.isles || []).map(i => {
+    const owners = G.players.filter(pl => newIslandsOf(pl).indexOf(i.island) >= 0);
+    const mine = owners.some(o => o.id === p.id);
+    const cls = mine ? "isle mine" : owners.length ? "isle claimed" : "isle";
+    return '<span class="' + cls + '">' + esc(i.name) + " · " +
+      (owners.length ? esc(owners.map(o => o.name).join(", ")) : "open") + "</span>";
+  }).join("");
+  if (chips) h += '<div class="isles">' + chips + "</div>";
+  h += '<p class="mnote">A ship costs ' + costText(COST.ship) +
+    " and runs on water only. Roads and shipping lanes join into one trade route, but they may only " +
+    "change over at your own settlement or city. Your <b>first settlement on each smaller island is worth 2 extra points</b>.</p>";
+  $("seaBox").innerHTML = h;
+}
+
+function render() { drawBoard(); drawPanel(); scheduleAI(); }
+/* ============================================================
+   Turn flow and player actions
+   ============================================================ */
+
+function cur() { return G.players[G.cur]; }
+
+function setPending(obj) { G.pending = obj; render(); }
+function clearPending() { G.pending = null; render(); }
+
+/* ---------- setup ---------- */
+function beginSetup() {
+  const n = G.players.length;
+  const fwd = [], back = [];
+  for (let i = 0; i < n; i++) { fwd.push(i); back.push(n - 1 - i); }
+  G.setupOrder = fwd.concat(back);
+  G.setupStep = 0;
+  G.phase = "setup1";
+  nextSetupPlacement();
+}
+
+function nextSetupPlacement() {
+  if (G.setupStep >= G.setupOrder.length) {
+    G.phase = "roll";
+    G.cur = G.setupOrder[G.setupOrder.length - 1];
+    note("Setup complete. " + cur().name + " opens the game.", "hi");
+    clearPending();
+    return;
+  }
+  G.cur = G.setupOrder[G.setupStep];
+  const second = G.setupStep >= G.players.length;
+  G.phase = second ? "setup2" : "setup1";
+  const what = (G.mode === "ck" && second) ? "city" : "settlement";
+  setPending({
+    kind: "setupBuilding", actor: G.cur,
+    what,
+    vertices: legalSettlementSpots(G.cur, true),
+    hint: cur().name + ": place your " + (second ? "second " : "first ") + what + ".",
+    mandatory: true
+  });
+}
+
+function placeSetupBuilding(vid) {
+  const p = cur();
+  const second = G.phase === "setup2";
+  const type = (G.mode === "ck" && second) ? "city" : "settlement";
+  const v = G.geo.vertices[vid];
+  v.building = { p: p.id, type, wall: false, metro: null };
+  if (type === "city") { p.citiesLeft--; } else { p.settlementsLeft--; }
+  note(p.name + " places a " + type + ".");
+
+  if (second) {
+    const bag = {};
+    v.hexes.forEach(hid => {
+      const h = G.geo.hexes[hid];
+      const t = TERRAIN[h.type];
+      if (!t.res) return;
+      bag[t.res] = (bag[t.res] || 0) + 1;
+      addCard(p, t.res, 1);
+    });
+    const keys = Object.keys(bag);
+    if (keys.length) note(p.name + " collects " + keys.map(k => bag[k] + " " + k).join(", ") + ".");
+  }
+
+  const links = legalRoadSpots(p.id, vid).concat(legalShipSpots(p.id, vid));
+  setPending({
+    kind: "setupRoad", actor: p.id,
+    from: vid,
+    edges: links.filter((x, i) => links.indexOf(x) === i),
+    hint: p.name + (isSF() ? ": attach a road or a ship to it." : ": place the road attached to it."),
+    mandatory: true
+  });
+}
+
+function placeSetupRoad(eid) {
+  const p = cur();
+  const e = G.geo.edges[eid];
+  const settle = ship => {
+    e.road = p.id;
+    e.ship = !!ship;
+    if (ship) p.shipsLeft--; else p.roadsLeft--;
+    note(p.name + (ship ? " launches a ship." : " lays a road."));
+    refreshLongestRoad();
+    G.setupStep++;
+    nextSetupPlacement();
+  };
+  if (isSF() && edgeHasLand(e) && edgeHasSea(e)) {
+    chooseOption("Road or ship", "That stretch runs along the coast — it can carry either.", [
+      { label: "Lay a road", sub: "Stays on land, links to your inland network", value: 0 },
+      { label: "Launch a ship", sub: "Heads out to sea toward the smaller islands", value: 1 }
+    ], v => settle(v === 1), true, { actor: p, aiPick: its => (Math.random() < 0.3 ? 1 : 0) });
+    return;
+  }
+  settle(isSF() && !edgeHasLand(e));
+}
+
+/* ---------- rolling ---------- */
+function rollDice(forced) {
+  const p = cur();
+  const a = forced ? forced[0] : d6();
+  const b = forced ? forced[1] : d6();
+  G.dice = [a, b];
+  const total = a + b;
+
+  if (G.mode === "ck") {
+    G.eventDie = EVENT_FACES[Math.floor(Math.random() * 6)];
+    note(p.name + " rolls " + a + " + " + b + " = " + total + " · event: " +
+      (G.eventDie === "barbarian" ? "barbarian ship" : G.eventDie + " gate"), "hi");
+    resolveEventDie(() => resolveProduction(total));
+  } else {
+    note(p.name + " rolls " + a + " + " + b + " = " + total + ".", "hi");
+    resolveProduction(total);
+  }
+}
+
+function resolveProduction(total) {
+  G.players.forEach(pl => { pl.aqueductDue = false; });
+  if (total === 7) {
+    G.phase = "main";
+    startDiscards(() => {
+      if (isCK() && !G.barbAttacked) {
+        note("The robber stays put — the barbarians have not yet landed.");
+        render();
+        return;
+      }
+      if (isSF()) { chooseRaider(); return; }
+      setPending({
+        kind: "moveRobber",
+        hexes: robberTargets(),
+        hint: cur().name + ": move the robber.",
+        mandatory: true
+      });
+    });
+    return;
+  }
+  const yield_ = produce(total);
+  G.phase = "main";
+  if (isSF()) { runGoldQueue(yield_.gold, () => render()); return; }
+  if (!isCK()) { render(); return; }
+
+  const queue = [];
+  for (let i = 0; i < G.players.length; i++) {
+    const p = G.players[(G.cur + i) % G.players.length];
+    if (p.aqueductDue) queue.push(p);
+  }
+  const step = () => {
+    if (!queue.length) { render(); return; }
+    const p = queue.shift();
+    p.aqueductDue = false;
+    pickCards("Aqueduct — " + p.name, "Your holdings produced nothing. Take any 1 resource from the bank.", RES, 1, picked => {
+      addCard(p, picked[0], 1);
+      note(p.name + " draws 1 " + picked[0] + " from the aqueduct.");
+      step();
+    }, { actor: p });
+  };
+  step();
+}
+
+/* ---------- discards on a 7 ---------- */
+function startDiscards(done) {
+  const queue = G.players.filter(p => handCount(p) > handLimit(p)).map(p => p.id);
+  const step = () => {
+    if (!queue.length) { done(); return; }
+    const p = G.players[queue.shift()];
+    const n = Math.floor(handCount(p) / 2);
+    discardDialog(p, n, step);
+  };
+  step();
+}
+
+/* ---------- robber ---------- */
+function moveRobberTo(hid, stealAll) {
+  G.robber = hid;
+  note(cur().name + " moves the robber to the " + TERRAIN[G.geo.hexes[hid].type].label.toLowerCase() + ".");
+  const victims = [];
+  G.geo.hexes[hid].vertices.forEach(vid => {
+    const v = G.geo.vertices[vid];
+    if (v.building && v.building.p !== G.cur && !victims.includes(v.building.p)) victims.push(v.building.p);
+  });
+  const withCards = victims.filter(id => handCount(G.players[id]) > 0);
+  clearPending();
+  if (!withCards.length) { render(); return; }
+
+  if (stealAll) {
+    withCards.forEach(id => stealRandom(G.players[id], cur()));
+    render();
+    return;
+  }
+  if (withCards.length === 1) { stealRandom(G.players[withCards[0]], cur()); render(); return; }
+  choosePlayer("Steal a card", "Take 1 random card from one neighbour.",
+    withCards, id => { stealRandom(G.players[id], cur()); render(); });
+}
+
+/* Seafarers: a seven sends either the robber ashore or the pirate to sea. */
+function chooseRaider() {
+  const p = cur();
+  chooseOption("Robber or pirate", "Seven is rolled. Send one of them somewhere new.", [
+    { label: "Move the robber", sub: "Shut down a land hex and steal from a neighbour", value: "r" },
+    { label: "Move the pirate", sub: "Close a stretch of sea and raid a ship alongside", value: "p" }
+  ], v => {
+    if (v === "p") {
+      setPending({ kind: "movePirate", hexes: pirateTargets(), hint: p.name + ": move the pirate.", mandatory: true });
+    } else {
+      setPending({ kind: "moveRobber", hexes: robberTargets(), hint: p.name + ": move the robber.", mandatory: true });
+    }
+  }, true, { aiPick: its => aiPickRaider(p, its) });
+}
+
+function movePirateTo(hid) {
+  G.pirate = hid;
+  note(cur().name + " sails the pirate into open water — no ship may be laid alongside it.");
+  const victims = [];
+  G.geo.hexes[hid].edges.forEach(eid => {
+    const e = G.geo.edges[eid];
+    if (e.road === null || !e.ship || e.road === G.cur) return;
+    if (victims.indexOf(e.road) < 0) victims.push(e.road);
+  });
+  const withCards = victims.filter(id => handCount(G.players[id]) > 0);
+  clearPending();
+  if (!withCards.length) { note("No laden ship is within reach."); render(); return; }
+  if (withCards.length === 1) { stealRandom(G.players[withCards[0]], cur()); render(); return; }
+  choosePlayer("Raid a ship", "Take 1 random card from one of the ships alongside.",
+    withCards, id => { stealRandom(G.players[id], cur()); render(); });
+}
+
+function stealRandom(from, to) {
+  const list = handList(from);
+  if (!list.length) return;
+  const k = list[Math.floor(Math.random() * list.length)];
+  addCard(from, k, -1);
+  addCard(to, k, 1);
+  note(to.name + " takes 1 " + k + " from " + from.name + ".", "bad");
+}
+
+/* ---------- building ---------- */
+function actBuildRoad(free) {
+  const p = cur();
+  const spots = legalRoadSpots(p.id);
+  if (!spots.length) { toast("No legal road placement."); return; }
+  setPending({
+    kind: "road", free: !!free, edges: spots,
+    hint: free ? "Place a free road." : "Place a road (" + costText(COST.road) + ")."
+  });
+}
+function doBuildRoad(eid, free) {
+  const p = cur();
+  if (!free) pay(p, COST.road);
+  G.geo.edges[eid].road = p.id;
+  p.roadsLeft--;
+  note(p.name + " builds a road.");
+  refreshLongestRoad();
+  clearPending();
+  checkWin();
+}
+
+/* ---------- ships ---------- */
+function actBuildShip(free) {
+  const p = cur();
+  if (p.shipsLeft <= 0) { toast("Every ship you own is already at sea."); return; }
+  const spots = legalShipSpots(p.id);
+  if (!spots.length) { toast("No open water reaches your coast or your shipping route."); return; }
+  setPending({
+    kind: "ship", free: !!free, edges: spots,
+    hint: free ? "Launch a ship at no cost." : "Launch a ship (" + costText(COST.ship) + ")."
+  });
+}
+function doBuildShip(eid, free) {
+  const p = cur();
+  if (!free) pay(p, COST.ship);
+  const e = G.geo.edges[eid];
+  e.road = p.id; e.ship = true; e.newShip = true;
+  p.shipsLeft--;
+  note(p.name + " launches a ship.");
+  refreshLongestRoad();
+  clearPending();
+  checkWin();
+}
+
+function actMoveShip() {
+  const p = cur();
+  if (p.turnFlags.shipMoved) { toast("Only one ship may be re-sailed per turn."); return; }
+  const open = openShipsOf(p.id);
+  if (!open.length) { toast("No ship is free to move — only the loose end of a route can sail on."); return; }
+  setPending({ kind: "shipLift", edges: open, hint: "Choose the ship you want to re-sail." });
+}
+function doLiftShip(eid) {
+  const p = cur();
+  const e = G.geo.edges[eid];
+  e.road = null; e.ship = false;
+  const spots = legalShipSpots(p.id).filter(x => x !== eid);
+  if (!spots.length) {
+    e.road = p.id; e.ship = true;
+    toast("That ship has nowhere better to go.");
+    clearPending();
+    return;
+  }
+  setPending({ kind: "shipDrop", from: eid, edges: spots, hint: "Where should the ship sail to?", mandatory: true });
+}
+function doDropShip(eid, from) {
+  const p = cur();
+  const e = G.geo.edges[eid];
+  e.road = p.id; e.ship = true; e.newShip = true;
+  p.turnFlags.shipMoved = true;
+  note(p.name + " re-sails a ship.");
+  refreshLongestRoad();
+  clearPending();
+  checkWin();
+}
+
+function actBuildSettlement() {
+  const p = cur();
+  const spots = legalSettlementSpots(p.id, false);
+  if (!spots.length) { toast("No legal settlement spot on your network."); return; }
+  setPending({ kind: "settlement", vertices: spots, hint: "Place a settlement (" + costText(COST.settlement) + ")." });
+}
+function doBuildSettlement(vid) {
+  const p = cur();
+  pay(p, COST.settlement);
+  G.geo.vertices[vid].building = { p: p.id, type: "settlement", wall: false, metro: null };
+  p.settlementsLeft--;
+  note(p.name + " builds a settlement.");
+  refreshLongestRoad();
+  clearPending();
+  checkWin();
+}
+
+function actBuildCity(discount) {
+  const p = cur();
+  const spots = legalCitySpots(p.id);
+  if (!spots.length) { toast("You have no settlement to upgrade."); return; }
+  setPending({ kind: "city", discount: !!discount, vertices: spots,
+    hint: "Upgrade a settlement to a city (" + costText(discount ? { ore: 2, grain: 1 } : COST.city) + ")." });
+}
+function doBuildCity(vid, discount) {
+  const p = cur();
+  pay(p, discount ? { ore: 2, grain: 1 } : COST.city);
+  G.geo.vertices[vid].building.type = "city";
+  p.citiesLeft--; p.settlementsLeft++;
+  note(p.name + " upgrades to a city.");
+  clearPending();
+  checkWin();
+}
+
+/* ---------- bank & port trading ---------- */
+function tradeRates(p) {
+  const rate = {};
+  ALLCARDS.forEach(k => { rate[k] = 4; });
+  const owned = new Set();
+  G.geo.vertices.forEach(v => {
+    if (v.building && v.building.p === p.id && v.port) owned.add(v.port);
+  });
+  if (owned.has("any")) ALLCARDS.forEach(k => { rate[k] = Math.min(rate[k], 3); });
+  RES.forEach(r => { if (owned.has(r)) rate[r] = Math.min(rate[r], 2); });
+  if (isCK()) {
+    if (p.imp.trade >= 3) COM.forEach(c => { rate[c] = Math.min(rate[c], 2); });
+    if (p.hasMerchant && G.merchantHex !== null) {
+      const t = TERRAIN[G.geo.hexes[G.merchantHex].type];
+      if (t.res) rate[t.res] = Math.min(rate[t.res], 2);
+    }
+    if (p.turnFlags.fleet) rate[p.turnFlags.fleet] = Math.min(rate[p.turnFlags.fleet], 2);
+  }
+  return rate;
+}
+
+/* ---------- development cards (base game) ---------- */
+function actBuyDev() {
+  const p = cur();
+  if (!G.dev.length) { toast("The development deck is empty."); return; }
+  pay(p, COST.dev);
+  const c = G.dev.pop();
+  p.dev.push(c);
+  p.devBoughtThisTurn.push(c);
+  note(p.name + " buys a development card.");
+  if (c === "vp") note("It is a victory point card — kept hidden until the end.");
+  checkWin();
+}
+
+function playableDev(p) {
+  const bought = p.devBoughtThisTurn.slice();
+  return p.dev.filter(c => {
+    if (c === "vp") return false;
+    const i = bought.indexOf(c);
+    if (i >= 0) { bought.splice(i, 1); return false; }
+    return true;
+  });
+}
+
+function playDev(kind) {
+  const p = cur();
+  p.dev.splice(p.dev.indexOf(kind), 1);
+  p.devPlayedThisTurn = true;
+  note(p.name + " plays " + DEV_INFO[kind].title + ".", "hi");
+  if (kind === "knight") {
+    p.playedKnights++;
+    refreshLargestArmy();
+    setPending({
+      kind: "moveRobber",
+      hexes: robberTargets(),
+      hint: "Move the robber.", mandatory: true
+    });
+  } else if (kind === "roadBuilding") {
+    freeRoads(2);
+  } else if (kind === "yearOfPlenty") {
+    pickCards("Year of Plenty", "Take any 2 resources from the bank.", RES, 2, picked => {
+      picked.forEach(k => addCard(p, k, 1));
+      note(p.name + " takes " + picked.join(" and ") + ".");
+      render();
+    });
+  } else if (kind === "monopoly") {
+    pickCards("Monopoly", "Name a resource. Every opponent hands over all of it.", RES, 1, picked => {
+      const k = picked[0];
+      let got = 0;
+      G.players.forEach(o => {
+        if (o.id === p.id) return;
+        const n = hasCard(o, k);
+        if (n) { addCard(o, k, -n); got += n; }
+      });
+      addCard(p, k, got);
+      note(p.name + " monopolises " + k + " and collects " + got + ".", "bad");
+      render();
+    }, { aiPick: o => aiRichestAcrossOpponents(p, o.map(x => x.value !== undefined ? x.value : x)) });
+  }
+  checkWin();
+}
+
+function freeRoads(n) {
+  const p = cur();
+  const step = left => {
+    if (left <= 0) { clearPending(); checkWin(); return; }
+    const spots = legalRoadSpots(p.id);
+    if (!spots.length || p.roadsLeft <= 0) { clearPending(); return; }
+    setPending({
+      kind: "freeRoad", left, edges: spots,
+      hint: "Place a free road (" + left + " remaining).", mandatory: false,
+      after: () => step(left - 1)
+    });
+  };
+  step(n);
+}
+
+/* ---------- end of turn ---------- */
+function endTurn() {
+  const p = cur();
+  p.devBoughtThisTurn = [];
+  p.devPlayedThisTurn = false;
+  p.turnFlags = {};
+  if (isSF()) G.geo.edges.forEach(e => { if (e.road === p.id) e.newShip = false; });
+  p.knightUsedPromote = [];
+  if (G.mode === "ck") {
+    p.knightsPlaced.forEach(vid => {
+      const k = G.geo.vertices[vid].knight;
+      if (k) { k.actedThisTurn = false; k.activatedThisTurn = false; k.bornTurn = false; }
+    });
+  }
+  p.aiTrades = 0;
+  p.aiOffered = false;
+  p.aiSkip = {};
+  G.aiSteps = 0;
+  G.aiStuck = 0;
+  G.cur = (G.cur + 1) % G.players.length;
+  G.dice = [null, null];
+  G.eventDie = null;
+  G.phase = "roll";
+  const q = cur();
+  q.turnFlags = {};
+  q.knightUsedPromote = [];
+  note("— " + q.name + "'s turn —");
+  clearPending();
+}
+
+function checkWin() {
+  const p = cur();
+  if (totalVP(p) >= G.target) {
+    G.winner = p.id;
+    G.phase = "over";
+    note(p.name + " reaches " + totalVP(p) + " victory points and wins.", "hi");
+    render();
+    winDialog(p);
+    return true;
+  }
+  render();
+  return false;
+}
+/* ============================================================
+   Cities & Knights systems
+   ============================================================ */
+
+/* ---------- event die ---------- */
+function resolveEventDie(after) {
+  if (G.eventDie === "barbarian") {
+    G.barb++;
+    if (G.barb >= BARB_TRACK) { barbarianAttack(after); return; }
+    note("The barbarian ship advances to space " + G.barb + " of " + BARB_TRACK + ".");
+    after();
+    return;
+  }
+  const track = G.eventDie;
+  const red = G.dice[1];
+  const order = [];
+  for (let i = 0; i < G.players.length; i++) order.push(G.players[(G.cur + i) % G.players.length]);
+  const eligible = order.filter(p => p.imp[track] >= 1 && red <= p.imp[track] + 1);
+  if (!eligible.length) { note("No one has enough " + track + " development to draw a card."); after(); return; }
+  const step = () => {
+    if (!eligible.length) { after(); return; }
+    drawProgress(eligible.shift(), track, step);
+  };
+  step();
+}
+
+function drawProgress(p, track, done) {
+  const deck = G.progDecks[track];
+  if (!deck.length) { note("The " + track + " deck is exhausted."); done(); return; }
+  const card = deck.pop();
+  if (VP_PROG.includes(card)) {
+    p.vpCards++;
+    note(p.name + " reveals " + PROG[card].title + " — 1 victory point.", "hi");
+    render();
+    done();
+    return;
+  }
+  p.prog.push(card);
+  note(p.name + " draws a " + track + " progress card.");
+  if (p.prog.length > 4) {
+    chooseProgToDiscard(p, done);
+  } else { render(); done(); }
+}
+
+function chooseProgToDiscard(p, done) {
+  chooseOption("Hand limit — " + p.name, "You may hold only 4 progress cards. Return one to the bottom of its deck.",
+    p.prog.map((c, i) => ({ label: PROG[c].title, sub: PROG[c].text, value: i, deck: PROG[c].deck })),
+    idx => {
+      const c = p.prog.splice(idx, 1)[0];
+      G.progDecks[PROG[c].deck].unshift(c);
+      note(p.name + " returns " + PROG[c].title + " to the deck.");
+      render();
+      done();
+    }, true, { actor: p });
+}
+
+/* ---------- barbarians ---------- */
+function barbarianStrength() {
+  let n = 0;
+  G.geo.vertices.forEach(v => { if (v.building && v.building.type === "city") n++; });
+  return n;
+}
+function knightStrengthOf(pid) {
+  let n = 0;
+  G.geo.vertices.forEach(v => { if (v.knight && v.knight.p === pid && v.knight.active) n += v.knight.str; });
+  return n;
+}
+function knightStrengthTotal() { return sum(G.players.map(p => knightStrengthOf(p.id))); }
+
+function barbarianAttack(after) {
+  const strength = barbarianStrength();
+  const defence = knightStrengthTotal();
+  const per = G.players.map(p => knightStrengthOf(p.id));
+  note("The barbarians land! Attack " + strength + " against knights " + defence + ".", "bad");
+  battleReport(strength, defence, per, () => resolveBarbarians(strength, defence, per, after));
+}
+
+/* The landing, laid out before anything changes hands. */
+function battleReport(strength, defence, per, done) {
+  if (!G.players.some(pl => !isAI(pl))) { done(); return; }
+  const scale = Math.max(strength, defence, 1);
+  const held = defence >= strength;
+  const bar = (n, colour) => '<span class="bar"><i style="width:' +
+    Math.round(n / scale * 100) + "%;background:" + colour + '"></i></span><span class="num">' + n + "</span>";
+  const list = G.players.map((pl, i) =>
+    '<div class="mrow"><span class="swatch" style="background:' + pl.color + '"></span>' +
+    '<span class="nm">' + esc(pl.name) + "</span>" +
+    '<span class="mbar"><i style="width:' + Math.round(per[i] / scale * 100) + '%;background:' + pl.color + '"></i></span>' +
+    '<span class="val">' + per[i] + "</span></div>").join("");
+
+  openModal(
+    "<h2>The barbarians land</h2><div class=\"body\">" +
+    '<div class="battle">' +
+    '<div class="side"><span class="lab">Barbarians</span>' + bar(strength, "#b3352a") + "</div>" +
+    '<div class="side"><span class="lab">Knights</span>' + bar(defence, "#5c7a4a") + "</div>" +
+    "</div>" +
+    '<p class="verdict ' + (held ? "win" : "lose") + '">' +
+    (held ? "Catan holds the shore." : "The shore is overrun.") + "</p>" +
+    '<p class="muted">' + (held
+      ? "The single strongest court is named Defender of Catan and takes a victory point. Courts tied at the top draw a progress card each instead."
+      : "The weakest court on the field loses a city to the sack. A city carrying a metropolis is spared.") + "</p>" +
+    '<p class="eyebrow" style="color:var(--brown-2);margin-top:15px">KNIGHTS IN THE FIELD</p>' + list +
+    "</div>" +
+    '<div class="foot"><button class="btn primary" id="ok">' +
+    (held ? "Claim the field" : "See what it costs") + "</button></div>",
+    m => m.querySelector("#ok").addEventListener("click", () => { closeModal(); done(); }));
+}
+
+function resolveBarbarians(strength, defence, per, after) {
+  const finish = () => {
+    G.barb = 0;
+    G.barbAttacked = true;
+    G.geo.vertices.forEach(v => { if (v.knight) v.knight.active = false; });
+    note("The barbarians sail home. Every knight is now idle.");
+    render();
+    after();
+  };
+
+  if (defence >= strength) {
+    const best = Math.max.apply(null, per);
+    const winners = per.map((s, i) => [s, i]).filter(x => x[0] === best && best > 0).map(x => x[1]);
+    if (!winners.length) { note("Catan holds, but no knight took the field."); finish(); return; }
+    if (winners.length === 1) {
+      G.players[winners[0]].vpCards++;
+      note(G.players[winners[0]].name + " is Defender of Catan — 1 victory point.", "hi");
+      finish();
+      return;
+    }
+    note("Defence is tied. Each leading player draws a progress card of their choice.");
+    const order = [];
+    for (let i = 0; i < G.players.length; i++) {
+      const id = (G.cur + i) % G.players.length;
+      if (winners.includes(id)) order.push(G.players[id]);
+    }
+    const step = () => {
+      if (!order.length) { finish(); return; }
+      const p = order.shift();
+      chooseOption("Defender's reward — " + p.name, "Choose a progress deck to draw from.",
+        TRACKS.map(t => ({ label: IMPROVE[t].label, sub: G.progDecks[t].length + " cards left", value: t, deck: t, disabled: !G.progDecks[t].length })),
+        t => drawProgress(p, t, step), true, { actor: p });
+    };
+    step();
+    return;
+  }
+
+  // barbarians win — weakest defenders are pillaged
+  const eligible = [];
+  G.players.forEach(p => {
+    const cities = G.geo.vertices.filter(v => v.building && v.building.p === p.id && v.building.type === "city" && !v.building.metro);
+    if (cities.length) eligible.push(p.id);
+  });
+  if (!eligible.length) { note("The barbarians find nothing worth sacking."); finish(); return; }
+  const low = Math.min.apply(null, eligible.map(id => per[id]));
+  const losers = eligible.filter(id => per[id] === low);
+  const step = () => {
+    if (!losers.length) { finish(); return; }
+    const p = G.players[losers.shift()];
+    const cities = G.geo.vertices.filter(v => v.building && v.building.p === p.id && v.building.type === "city" && !v.building.metro);
+    if (!cities.length) { step(); return; }
+    if (cities.length === 1) { pillage(cities[0].id, p); step(); return; }
+    const savedCur = G.cur;
+    setPending({
+      kind: "pillage", owner: p.id, actor: p.id, after: step,
+      vertices: cities.map(v => v.id),
+      hint: p.name + ": the barbarians sack one of your cities — choose which.",
+      mandatory: true, savedCur
+    });
+  };
+  step();
+}
+
+function pillage(vid, p) {
+  const v = G.geo.vertices[vid];
+  v.building.type = "settlement";
+  if (v.building.wall) { v.building.wall = false; p.wallsLeft++; note(p.name + "'s city wall is torn down.", "bad"); }
+  p.citiesLeft++; p.settlementsLeft--;
+  note(p.name + " loses a city to the barbarians.", "bad");
+}
+
+/* ---------- city improvements ---------- */
+function improvementCost(p, track) {
+  let c = p.imp[track] + 1;
+  if (p.turnFlags.crane) c = Math.max(0, c - 1);
+  return c;
+}
+function ownsCity(p) {
+  return G.geo.vertices.some(v => v.building && v.building.p === p.id && v.building.type === "city");
+}
+function freeMetroCities(p) {
+  return G.geo.vertices.filter(v => v.building && v.building.p === p.id && v.building.type === "city" && !v.building.metro);
+}
+function metroHolder(track) {
+  let who = null;
+  G.players.forEach(p => { if (p.metros.includes(track)) who = p.id; });
+  return who;
+}
+function canImprove(p, track) {
+  if (p.imp[track] >= 5) return "Already at the top level.";
+  if (!ownsCity(p)) return "You need at least one city.";
+  const next = p.imp[track] + 1;
+  if (next >= 4 && !p.metros.includes(track) && !freeMetroCities(p).length)
+    return "You need a city free to carry a metropolis.";
+  if (next === 4 && metroHolder(track) !== null) {
+    // level 4 is still allowed, it just cannot claim an occupied metropolis
+  }
+  if (hasCard(p, IMPROVE[track].com) < improvementCost(p, track))
+    return "Costs " + improvementCost(p, track) + " " + IMPROVE[track].com + ".";
+  return null;
+}
+
+function buyImprovement(track) {
+  const p = cur();
+  const bad = canImprove(p, track);
+  if (bad) { toast(bad); return; }
+  const cost = improvementCost(p, track);
+  addCard(p, IMPROVE[track].com, -cost);
+  if (p.turnFlags.crane) p.turnFlags.crane = false;
+  p.imp[track]++;
+  const lvl = p.imp[track];
+  note(p.name + " builds the " + IMPROVE[track].names[lvl - 1] + " (" + IMPROVE[track].label + " " + lvl + ").", "hi");
+  if (lvl === 3) {
+    const perk = track === "trade" ? "commodities now trade 2:1"
+      : track === "politics" ? "strong knights may be promoted to mighty"
+      : "an empty production roll now yields 1 resource";
+    note("Special ability unlocked: " + perk + ".");
+  }
+  if (lvl >= 4) tryMetropolis(p, track, lvl);
+  else { clearPending(); checkWin(); }
+}
+
+function tryMetropolis(p, track, lvl) {
+  const holder = metroHolder(track);
+  if (holder === p.id) { clearPending(); checkWin(); return; }
+  if (holder !== null) {
+    const other = G.players[holder];
+    if (lvl < 5 || other.imp[track] >= 5) {
+      note("The " + track + " metropolis stays with " + other.name + ".");
+      clearPending(); checkWin(); return;
+    }
+    // take it
+    G.geo.vertices.forEach(v => { if (v.building && v.building.metro === track) v.building.metro = null; });
+    other.metros = other.metros.filter(t => t !== track);
+    note(p.name + " seizes the " + track + " metropolis from " + other.name + ".", "bad");
+  }
+  const cities = freeMetroCities(p);
+  if (!cities.length) { note("No free city to carry the metropolis."); clearPending(); checkWin(); return; }
+  if (cities.length === 1) { placeMetro(cities[0].id, p, track); return; }
+  setPending({
+    kind: "metropolis", track,
+    vertices: cities.map(v => v.id),
+    hint: p.name + ": choose the city that becomes your " + track + " metropolis.",
+    mandatory: true
+  });
+}
+function placeMetro(vid, p, track) {
+  G.geo.vertices[vid].building.metro = track;
+  p.metros.push(track);
+  note(p.name + " raises the " + track + " metropolis — 2 extra victory points.", "hi");
+  clearPending();
+  checkWin();
+}
+
+/* ---------- city walls ---------- */
+function actBuildWall(free) {
+  const p = cur();
+  if (p.wallsLeft <= 0) { toast("All 3 walls are already on the board."); return; }
+  const spots = G.geo.vertices.filter(v => v.building && v.building.p === p.id && v.building.type === "city" && !v.building.wall);
+  if (!spots.length) { toast("No unwalled city available."); return; }
+  setPending({ kind: "wall", free: !!free, vertices: spots.map(v => v.id),
+    hint: free ? "Place a free city wall." : "Build a city wall (2 brick)." });
+}
+function doBuildWall(vid, free) {
+  const p = cur();
+  if (!free) pay(p, COST.wall);
+  G.geo.vertices[vid].building.wall = true;
+  p.wallsLeft--;
+  note(p.name + " walls a city. Safe hand size is now " + handLimit(p) + ".");
+  clearPending();
+  render();
+}
+
+/* ---------- knights ---------- */
+function knightCounts(p) {
+  const c = { 1: 0, 2: 0, 3: 0 };
+  p.knightsPlaced.forEach(vid => {
+    const k = G.geo.vertices[vid].knight;
+    if (k) c[k.str]++;
+  });
+  return c;
+}
+function actBuildKnight() {
+  const p = cur();
+  if (knightCounts(p)[1] >= 2) { toast("Both basic knights are already on the board."); return; }
+  const spots = legalKnightSpots(p.id);
+  if (!spots.length) { toast("No free intersection on your road network."); return; }
+  setPending({ kind: "knight", vertices: spots, hint: "Place a knight (" + costText(COST.knight) + ")." });
+}
+function doBuildKnight(vid) {
+  const p = cur();
+  pay(p, COST.knight);
+  G.geo.vertices[vid].knight = { p: p.id, str: 1, active: false, bornTurn: true, actedThisTurn: false };
+  p.knightsPlaced.push(vid);
+  note(p.name + " hires a knight.");
+  refreshLongestRoad();
+  clearPending();
+}
+
+function knightsOf(p) {
+  return p.knightsPlaced.map(vid => ({ vid, k: G.geo.vertices[vid].knight })).filter(x => x.k);
+}
+
+function actActivateKnight(free) {
+  const p = cur();
+  const list = knightsOf(p).filter(x => !x.k.active);
+  if (!list.length) { toast("Every knight is already active."); return; }
+  if (!free && !canPay(p, COST.activate)) { toast("Activating costs 1 grain."); return; }
+  setPending({
+    kind: "activate", free: !!free,
+    vertices: list.map(x => x.vid),
+    hint: free ? "Choose a knight to activate for free." : "Activate a knight (1 grain)."
+  });
+}
+function doActivate(vid, free) {
+  const p = cur();
+  if (!free) pay(p, COST.activate);
+  const k = G.geo.vertices[vid].knight;
+  k.active = true;
+  k.activatedThisTurn = true;
+  note(p.name + " activates a knight.");
+  clearPending();
+}
+
+function actPromoteKnight(free) {
+  const p = cur();
+  const list = knightsOf(p).filter(x =>
+    x.k.str < 3 &&
+    !(x.k.str === 2 && p.imp.politics < 3) &&
+    !p.knightUsedPromote.includes(x.vid) &&
+    knightCounts(p)[x.k.str + 1] < 2);
+  if (!list.length) { toast("No knight can be promoted right now."); return; }
+  if (!free && !canPay(p, COST.promote)) { toast("Promotion costs " + costText(COST.promote) + "."); return; }
+  setPending({
+    kind: "promote", free: !!free,
+    vertices: list.map(x => x.vid),
+    hint: free ? "Promote a knight for free." : "Promote a knight (" + costText(COST.promote) + ")."
+  });
+}
+function doPromote(vid, free) {
+  const p = cur();
+  if (!free) pay(p, COST.promote);
+  const k = G.geo.vertices[vid].knight;
+  k.str++;
+  p.knightUsedPromote.push(vid);
+  note(p.name + " promotes a knight to strength " + k.str + ".");
+  clearPending();
+}
+
+function knightCanAct(p, x) {
+  return x.k.active && !x.k.activatedThisTurn && !x.k.actedThisTurn;
+}
+
+function actKnightAction() {
+  const p = cur();
+  const list = knightsOf(p).filter(x => knightCanAct(p, x));
+  if (!list.length) { toast("No knight is ready to act this turn."); return; }
+  setPending({
+    kind: "knightPick",
+    vertices: list.map(x => x.vid),
+    hint: "Choose the knight that will act."
+  });
+}
+
+function knightOptions(vid) {
+  const p = cur();
+  const k = G.geo.vertices[vid].knight;
+  const reach = roadReachable(p.id, vid);
+  const moves = reach.filter(v => {
+    const vx = G.geo.vertices[v];
+    return !vx.building && !vx.knight;
+  });
+  const displaces = reach.filter(v => {
+    const vx = G.geo.vertices[v];
+    return vx.knight && vx.knight.p !== p.id && vx.knight.str < k.str && !vx.building;
+  });
+  const robberAdjacent = G.geo.vertices[vid].hexes.includes(G.robber) && G.barbAttacked;
+  return { moves, displaces, robberAdjacent };
+}
+
+function openKnightMenu(vid) {
+  const opts = knightOptions(vid);
+  const items = [];
+  if (opts.moves.length) items.push({ label: "Move the knight", sub: opts.moves.length + " reachable intersections", value: "move" });
+  if (opts.displaces.length) items.push({ label: "Displace an enemy knight", sub: opts.displaces.length + " weaker knights in reach", value: "displace" });
+  if (opts.robberAdjacent) items.push({ label: "Chase away the robber", sub: "Move it and steal from a neighbour", value: "robber" });
+  if (!items.length) { toast("That knight has nothing to do."); clearPending(); return; }
+  chooseOption("Knight action", "The knight goes idle afterwards.", items, choice => {
+    if (choice === "move") {
+      setPending({ kind: "knightMove", from: vid, vertices: opts.moves, hint: "Move your knight along your roads." });
+    } else if (choice === "displace") {
+      setPending({ kind: "knightDisplace", from: vid, vertices: opts.displaces, hint: "Choose the knight to push aside." });
+    } else {
+      setPending({
+        kind: "knightRobber", from: vid,
+        hexes: robberTargets(),
+        hint: "Send the robber to a new hex.", mandatory: true
+      });
+    }
+  });
+}
+
+function moveKnight(from, to) {
+  const v1 = G.geo.vertices[from], v2 = G.geo.vertices[to];
+  const p = G.players[v1.knight.p];
+  v2.knight = v1.knight;
+  v1.knight = null;
+  p.knightsPlaced = p.knightsPlaced.map(x => (x === from ? to : x));
+  refreshLongestRoad();
+}
+
+function doKnightMove(from, to) {
+  moveKnight(from, to);
+  G.geo.vertices[to].knight.active = false;
+  G.geo.vertices[to].knight.actedThisTurn = true;
+  note(cur().name + " marches a knight.");
+  clearPending();
+}
+
+function doKnightDisplace(from, target, viaCard) {
+  const victimKnight = G.geo.vertices[target].knight;
+  const owner = G.players[victimKnight.p];
+  const dests = roadReachable(owner.id, target).filter(v => {
+    const vx = G.geo.vertices[v];
+    return !vx.building && !vx.knight && v !== target;
+  });
+  const settle = () => {
+    if (from !== null) {
+      moveKnight(from, target);
+      G.geo.vertices[target].knight.active = false;
+      G.geo.vertices[target].knight.actedThisTurn = true;
+    }
+    refreshLongestRoad();
+    clearPending();
+  };
+  // remove the displaced knight from its square first
+  G.geo.vertices[target].knight = null;
+  owner.knightsPlaced = owner.knightsPlaced.filter(v => v !== target);
+  note(cur().name + " displaces a knight of " + owner.name + (viaCard ? " with Intrigue." : "."), "bad");
+
+  if (!dests.length) {
+    note(owner.name + " has nowhere to retreat — the knight is lost.", "bad");
+    settle();
+    return;
+  }
+  if (dests.length === 1) {
+    G.geo.vertices[dests[0]].knight = victimKnight;
+    owner.knightsPlaced.push(dests[0]);
+    note(owner.name + "'s knight retreats.");
+    settle();
+    return;
+  }
+  setPending({
+    kind: "retreat", knight: victimKnight, owner: owner.id, actor: owner.id,
+    vertices: dests, mandatory: true,
+    hint: owner.name + ": retreat your displaced knight.",
+    after: settle
+  });
+}
+
+/* ---------- progress cards ---------- */
+function playProgress(idx) {
+  const p = cur();
+  const card = p.prog[idx];
+  const info = PROG[card];
+  const consume = () => {
+    p.prog.splice(p.prog.indexOf(card), 1);
+    G.progDecks[info.deck].unshift(card);
+  };
+  note(p.name + " plays " + info.title + ".", "hi");
+
+  switch (card) {
+    case "crane":
+      consume(); p.turnFlags.crane = true; render(); break;
+
+    case "medicine": {
+      if (!legalCitySpots(p.id).length) { toast("You have no settlement to upgrade."); return; }
+      if (!canPay(p, { ore: 2, grain: 1 })) { toast("You need 2 ore and 1 grain."); return; }
+      consume(); actBuildCity(true); break;
+    }
+
+    case "engineer":
+      consume(); actBuildWall(true); break;
+
+    case "roadBuildingP":
+      consume(); freeRoads(2); break;
+
+    case "smith": {
+      consume();
+      let left = 2;
+      const step = () => {
+        const list = knightsOf(p).filter(x =>
+          x.k.str < 3 && !(x.k.str === 2 && p.imp.politics < 3) &&
+          !p.knightUsedPromote.includes(x.vid) && knightCounts(p)[x.k.str + 1] < 2);
+        if (!left || !list.length) { clearPending(); render(); return; }
+        setPending({
+          kind: "promote", free: true, vertices: list.map(x => x.vid),
+          hint: "Smith: promote a knight free (" + left + " left).",
+          after: () => { left--; step(); }
+        });
+      };
+      step();
+      break;
+    }
+
+    case "irrigation":
+    case "mining": {
+      consume();
+      const want = card === "irrigation" ? "fields" : "mountains";
+      const res = card === "irrigation" ? "grain" : "ore";
+      let n = 0;
+      G.geo.hexes.forEach(h => {
+        if (h.type !== want) return;
+        if (h.vertices.some(vid => ownsBuildingAt(G.geo.vertices[vid], p.id))) n += 2;
+      });
+      addCard(p, res, n);
+      note(p.name + " gains " + n + " " + res + ".");
+      render();
+      break;
+    }
+
+    case "inventor": {
+      const swappable = G.geo.hexes.filter(h => h.num !== null && ![2, 6, 8, 12].includes(h.num)).map(h => h.id);
+      if (swappable.length < 2) { toast("Not enough tokens can be swapped."); return; }
+      consume();
+      setPending({ kind: "inventorA", hexes: swappable, hint: "Inventor: pick the first number token." });
+      break;
+    }
+
+    case "alchemist":
+      toast("Alchemist must be played before you roll.");
+      break;
+
+    case "printer":
+    case "constitution":
+      consume(); p.vpCards++; checkWin(); break;
+
+    case "warlord": {
+      consume();
+      knightsOf(p).forEach(x => { if (!x.k.active) { x.k.active = true; x.k.activatedThisTurn = true; } });
+      note(p.name + " calls every knight to arms.");
+      render();
+      break;
+    }
+
+    case "bishop":
+      if (!G.barbAttacked) {
+        toast("The robber cannot be moved until the barbarians have landed once.");
+        return;
+      }
+      consume();
+      setPending({
+        kind: "bishop",
+        hexes: robberTargets(),
+        hint: "Bishop: move the robber.", mandatory: true
+      });
+      break;
+
+    case "deserter": {
+      const targets = G.players.filter(o => o.id !== p.id && knightsOf(o).length).map(o => o.id);
+      if (!targets.length) { toast("No opponent has a knight."); return; }
+      consume();
+      choosePlayer("Deserter", "Which court loses a knight?", targets, oid => {
+        const o = G.players[oid];
+        const list = knightsOf(o);
+        chooseOption("Deserter — " + o.name, "Choose which of your knights walks away.",
+          list.map(x => ({ label: "Strength " + x.k.str + (x.k.active ? " (active)" : " (idle)"), sub: "", value: x.vid })),
+          vid => {
+            const k = G.geo.vertices[vid].knight;
+            const wasStr = k.str, wasActive = k.active;
+            G.geo.vertices[vid].knight = null;
+            o.knightsPlaced = o.knightsPlaced.filter(v => v !== vid);
+            note(o.name + " loses a knight of strength " + wasStr + ".", "bad");
+            refreshLongestRoad();
+            let str = wasStr;
+            if (knightCounts(p)[str] >= 2) str = 1;
+            if (knightCounts(p)[str] >= 2) { note(p.name + " has no spare knight to send."); render(); return; }
+            const spots = legalKnightSpots(p.id);
+            if (!spots.length) { note("Nowhere to place the new knight."); render(); return; }
+            setPending({
+              kind: "deserterPlace", str, active: wasActive, vertices: spots,
+              hint: "Place your free knight of strength " + str + "."
+            });
+          }, true, { actor: o, aiPick: its => bestOf(its, it => -G.geo.vertices[it.value].knight.str).value });
+      });
+      break;
+    }
+
+    case "intrigue": {
+      const targets = [];
+      G.geo.vertices.forEach(v => {
+        if (!v.knight || v.knight.p === p.id) return;
+        if (v.edges.some(e => G.geo.edges[e].road === p.id)) targets.push(v.id);
+      });
+      if (!targets.length) { toast("No enemy knight sits on your road network."); return; }
+      consume();
+      setPending({ kind: "intrigue", vertices: targets, hint: "Intrigue: choose the knight to displace." });
+      break;
+    }
+
+    case "diplomat": {
+      const open = openRoads();
+      if (!open.length) { toast("There is no open road to remove."); return; }
+      consume();
+      setPending({ kind: "diplomat", edges: open, hint: "Diplomat: remove an open road." });
+      break;
+    }
+
+    case "saboteur": {
+      consume();
+      const mine = totalVP(p);
+      const victims = G.players.filter(o => o.id !== p.id && totalVP(o) >= mine && handCount(o) > 1);
+      if (!victims.length) { note("No one is rich or proud enough to suffer."); render(); break; }
+      const step = () => {
+        if (!victims.length) { render(); return; }
+        const o = victims.shift();
+        discardDialog(o, Math.floor(handCount(o) / 2), step);
+      };
+      step();
+      break;
+    }
+
+    case "spy": {
+      const targets = G.players.filter(o => o.id !== p.id && o.prog.length).map(o => o.id);
+      if (!targets.length) { toast("No opponent holds a progress card."); return; }
+      consume();
+      choosePlayer("Spy", "Whose hand will you read?", targets, oid => {
+        const o = G.players[oid];
+        chooseOption("Spy — " + o.name + "'s cards", "Take one for yourself.",
+          o.prog.map((c, i) => ({ label: PROG[c].title, sub: PROG[c].text, value: i, deck: PROG[c].deck })),
+          i => {
+            const c = o.prog.splice(i, 1)[0];
+            p.prog.push(c);
+            note(p.name + " lifts " + PROG[c].title + " from " + o.name + ".", "bad");
+            if (p.prog.length > 4) chooseProgToDiscard(p, render); else render();
+          }, true);
+      });
+      break;
+    }
+
+    case "wedding": {
+      consume();
+      const mine = totalVP(p);
+      const givers = G.players.filter(o => o.id !== p.id && totalVP(o) > mine && handCount(o) > 0);
+      if (!givers.length) { note("No one outranks you — the wedding gifts nothing."); render(); break; }
+      const step = () => {
+        if (!givers.length) { render(); return; }
+        const o = givers.shift();
+        const n = Math.min(2, handCount(o));
+        chooseCardsFromHand(o, n, "Wedding gift — " + o.name, "Hand " + n + " card" + (n > 1 ? "s" : "") + " to " + p.name + ".",
+          list => {
+            list.forEach(k => { addCard(o, k, -1); addCard(p, k, 1); });
+            note(o.name + " gives " + list.join(", ") + " to " + p.name + ".", "bad");
+            step();
+          }, { actor: o });
+      };
+      step();
+      break;
+    }
+
+    case "masterMerchant": {
+      const mine = totalVP(p);
+      const targets = G.players.filter(o => o.id !== p.id && totalVP(o) > mine && handCount(o) > 0).map(o => o.id);
+      if (!targets.length) { toast("No richer opponent to rob."); return; }
+      consume();
+      choosePlayer("Master Merchant", "Choose an opponent ahead of you on points.", targets, oid => {
+        const o = G.players[oid];
+        const n = Math.min(2, handCount(o));
+        chooseCardsFromHand(o, n, "Master Merchant", "You are looking at " + o.name + "'s hand. Take " + n + ".",
+          list => {
+            list.forEach(k => { addCard(o, k, -1); addCard(p, k, 1); });
+            note(p.name + " takes " + list.join(", ") + " from " + o.name + ".", "bad");
+            render();
+          }, { actor: p });
+      });
+      break;
+    }
+
+    case "commercialHarbor": {
+      const givers = G.players.filter(o => o.id !== p.id && sum(COM.map(c => o.com[c])) > 0);
+      if (!givers.length) { toast("No opponent holds a commodity."); return; }
+      if (!sum(RES.map(r => p.res[r]))) { toast("You need resources to offer."); return; }
+      consume();
+      const step = () => {
+        if (!givers.length) { render(); return; }
+        const o = givers.shift();
+        const mineRes = RES.filter(r => p.res[r] > 0);
+        if (!mineRes.length) { render(); return; }
+        pickCards("Commercial Harbor", "Offer " + o.name + " one resource.", mineRes, 1, sel => {
+          const give = sel[0];
+          const theirs = COM.filter(c => o.com[c] > 0);
+          pickCards("Commercial Harbor — " + o.name, "Return a commodity of your choice.", theirs, 1, back => {
+            addCard(p, give, -1); addCard(o, give, 1);
+            addCard(o, back[0], -1); addCard(p, back[0], 1);
+            note(p.name + " trades " + give + " to " + o.name + " for " + back[0] + ".");
+            step();
+          }, { actor: o });
+        });
+      };
+      step();
+      break;
+    }
+
+    case "merchant": {
+      const spots = G.geo.hexes.filter(h => TERRAIN[h.type].res &&
+        h.vertices.some(vid => ownsBuildingAt(G.geo.vertices[vid], p.id))).map(h => h.id);
+      if (!spots.length) { toast("No land hex next to your buildings."); return; }
+      consume();
+      setPending({ kind: "merchant", hexes: spots, hint: "Place the merchant beside one of your buildings.", mandatory: true });
+      break;
+    }
+
+    case "merchantFleet":
+      consume();
+      pickCards("Merchant Fleet", "Choose the good you will trade 2:1 for the rest of this turn.", ALLCARDS, 1, sel => {
+        p.turnFlags.fleet = sel[0];
+        note(p.name + " opens a 2:1 line in " + sel[0] + " for this turn.");
+        render();
+      });
+      break;
+
+    case "resourceMonopoly":
+      consume();
+      pickCards("Resource Monopoly", "Name a resource. Each opponent gives you 2.", RES, 1, sel => {
+        const k = sel[0];
+        let got = 0;
+        G.players.forEach(o => {
+          if (o.id === p.id) return;
+          const take = Math.min(2, hasCard(o, k));
+          if (take) { addCard(o, k, -take); got += take; }
+        });
+        addCard(p, k, got);
+        note(p.name + " corners the " + k + " market and takes " + got + ".", "bad");
+        render();
+      }, { aiPick: o => aiRichestAcrossOpponents(p, o.map(x => x.value !== undefined ? x.value : x)) });
+      break;
+
+    case "tradeMonopoly":
+      consume();
+      pickCards("Trade Monopoly", "Name a commodity. Each opponent gives you 1.", COM, 1, sel => {
+        const k = sel[0];
+        let got = 0;
+        G.players.forEach(o => {
+          if (o.id === p.id) return;
+          if (hasCard(o, k)) { addCard(o, k, -1); got++; }
+        });
+        addCard(p, k, got);
+        note(p.name + " taxes " + k + " and collects " + got + ".", "bad");
+        render();
+      }, { aiPick: o => aiRichestAcrossOpponents(p, o.map(x => x.value !== undefined ? x.value : x)) });
+      break;
+  }
+}
+
+function openRoads() {
+  const out = [];
+  G.geo.edges.forEach(e => {
+    if (e.road === null) return;
+    const free = [e.a, e.b].some(vid => {
+      const v = G.geo.vertices[vid];
+      if (v.building && v.building.p === e.road) return false;
+      if (v.knight && v.knight.p === e.road) return false;
+      const others = v.edges.filter(ei => ei !== e.id && G.geo.edges[ei].road === e.road);
+      return others.length === 0;
+    });
+    if (free) out.push(e.id);
+  });
+  return out;
+}
+
+function playAlchemist(idx) {
+  const p = cur();
+  chooseOption("Alchemist", "Set the two production dice.", [1, 2, 3, 4, 5, 6].map(n => ({ label: "Yellow die: " + n, value: n })),
+    a => {
+      chooseOption("Alchemist", "And the red die.", [1, 2, 3, 4, 5, 6].map(n => ({ label: "Red die: " + n, value: n })),
+        b => {
+          const card = p.prog[idx];
+          p.prog.splice(idx, 1);
+          G.progDecks[PROG[card].deck].unshift(card);
+          note(p.name + " plays Alchemist and fixes the dice at " + a + " and " + b + ".", "hi");
+          p.aiAlchemy = null;
+          rollDice([a, b]);
+        }, true, { aiPick: () => (p.aiAlchemy ? p.aiAlchemy[1] : 4) });
+    }, true, { aiPick: () => (p.aiAlchemy ? p.aiAlchemy[0] : 4) });
+}
+/* ============================================================
+   Dialogs, input handling and wiring
+   ============================================================ */
+
+let modalStack = 0;
+function openModal(html, mount) {
+  $("modal").innerHTML = html;
+  $("scrim").classList.add("show");
+  G.modalOpen = true;
+  modalStack++;
+  if (mount) mount($("modal"));
+  const f = $("modal").querySelector("button:not(:disabled)");
+  if (f) f.focus();
+}
+function closeModal() {
+  $("scrim").classList.remove("show");
+  $("modal").innerHTML = "";
+  G.modalOpen = false;
+  modalStack = 0;
+  scheduleAI();
+}
+
+let toastTimer = null;
+function toast(msg) {
+  let t = $("toast");
+  if (!t) {
+    t = document.createElement("div");
+    t.id = "toast";
+    t.style.cssText = "position:fixed;left:50%;transform:translateX(-50%);bottom:22px;background:#b3352a;color:#fff;" +
+      "padding:9px 16px;border-radius:3px;font-weight:600;z-index:80;box-shadow:0 6px 20px rgba(0,0,0,.5);max-width:80%";
+    document.body.appendChild(t);
+  }
+  t.textContent = msg;
+  t.style.display = "block";
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.style.display = "none"; }, 2600);
+}
+
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+
+/* ---------- generic pickers ---------- */
+function chooseOption(title, text, items, cb, mandatory, opts) {
+  opts = opts || {};
+  const actor = opts.actor !== undefined ? opts.actor : cur();
+  if (isAI(actor)) {
+    const live = items.filter(i => !i.disabled);
+    if (!live.length) { clearPending(); return; }
+    cb(opts.aiPick ? opts.aiPick(live) : live[0].value);
+    return;
+  }
+  const body = items.map((it, i) =>
+    '<button class="pcard ' + (it.deck || "") + '" data-i="' + i + '"' + (it.disabled ? " disabled" : "") + ">" +
+    (it.deck ? '<span class="flag">' + esc(it.deck) + "</span>" : "") +
+    "<b>" + esc(it.label) + "</b>" +
+    (it.sub ? "<small>" + esc(it.sub) + "</small>" : "") +
+    "</button>").join("");
+  openModal(
+    "<h2>" + esc(title) + '</h2><div class="body">' +
+    (text ? '<p class="muted" style="margin-top:0">' + esc(text) + "</p>" : "") +
+    '<div class="pcards">' + body + "</div></div>" +
+    (mandatory ? "" : '<div class="foot"><button class="btn" id="mCancel">Cancel</button></div>'),
+    m => {
+      m.querySelectorAll(".pcard").forEach(b => b.addEventListener("click", () => {
+        const it = items[+b.dataset.i];
+        closeModal();
+        cb(it.value);
+      }));
+      const c = m.querySelector("#mCancel");
+      if (c) c.addEventListener("click", () => { closeModal(); render(); });
+    });
+}
+
+function choosePlayer(title, text, ids, cb, opts) {
+  const items = ids.map(id => {
+    const p = G.players[id];
+    return { label: p.name, sub: handCount(p) + " cards · " + publicVP(p) + " VP", value: id };
+  });
+  chooseOption(title, text, items, cb, true, opts);
+}
+
+function pickCards(title, text, options, count, cb, opts) {
+  opts = opts || {};
+  const actor = opts.actor !== undefined ? opts.actor : cur();
+  if (isAI(actor)) {
+    if (!options.length) { clearPending(); return; }
+    const out = [];
+    for (let i = 0; i < count; i++) {
+      out.push(opts.aiPick ? opts.aiPick(options.map(k => ({ value: k }))) : aiScarcest(actor, options));
+    }
+    cb(out);
+    return;
+  }
+  const chosen = [];
+  const draw = () => {
+    const opts = options.map(k =>
+      '<button class="pick" data-k="' + k + '"><span class="dot" style="width:11px;height:11px;border-radius:2px;background:' +
+      CARDCOLOR[k] + '"></span>' + cap(k) + "</button>").join("");
+    openModal(
+      "<h2>" + esc(title) + '</h2><div class="body">' +
+      '<p class="muted" style="margin-top:0">' + esc(text) + "</p>" +
+      '<div class="picker">' + opts + "</div>" +
+      (count > 1 ? '<p class="muted">Chosen: ' + (chosen.join(", ") || "—") + " (" + chosen.length + "/" + count + ")</p>" : "") +
+      "</div>",
+      m => {
+        m.querySelectorAll(".pick").forEach(b => b.addEventListener("click", () => {
+          chosen.push(b.dataset.k);
+          if (chosen.length >= count) { closeModal(); cb(chosen); }
+          else draw();
+        }));
+      });
+  };
+  draw();
+}
+
+/* Choose exactly n cards out of a player's own hand. */
+function chooseCardsFromHand(p, n, title, text, cb, opts) {
+  if (n <= 0) { cb([]); return; }
+  opts = opts || {};
+  const actor = opts.actor !== undefined ? opts.actor : p;
+  if (isAI(actor)) { cb(aiWorstCards(p, n)); return; }
+  const sel = {};
+  ALLCARDS.forEach(k => { sel[k] = 0; });
+  const total = () => sum(ALLCARDS.map(k => sel[k]));
+  const draw = () => {
+    const rows = ALLCARDS.filter(k => hasCard(p, k) > 0).map(k =>
+      '<div class="counter"><span class="lab"><span class="dot" style="width:11px;height:11px;border-radius:2px;background:' +
+      CARDCOLOR[k] + '"></span>' + cap(k) + ' <span class="muted">(' + hasCard(p, k) + ")</span></span>" +
+      '<span class="stepper"><button data-m="' + k + '">−</button><span id="c_' + k + '">' + sel[k] +
+      '</span><button data-p="' + k + '">+</button></span></div>').join("");
+    openModal(
+      "<h2>" + esc(title) + '</h2><div class="body">' +
+      '<p class="muted" style="margin-top:0">' + esc(text) + "</p>" + rows +
+      '<p class="muted" id="tot">Selected ' + total() + " of " + n + "</p></div>" +
+      '<div class="foot"><button class="btn primary" id="ok"' + (total() === n ? "" : " disabled") + ">Confirm</button></div>",
+      m => {
+        m.querySelectorAll("[data-p]").forEach(b => b.addEventListener("click", () => {
+          const k = b.dataset.p;
+          if (sel[k] < hasCard(p, k) && total() < n) { sel[k]++; draw(); }
+        }));
+        m.querySelectorAll("[data-m]").forEach(b => b.addEventListener("click", () => {
+          const k = b.dataset.m;
+          if (sel[k] > 0) { sel[k]--; draw(); }
+        }));
+        m.querySelector("#ok").addEventListener("click", () => {
+          const list = [];
+          ALLCARDS.forEach(k => { for (let i = 0; i < sel[k]; i++) list.push(k); });
+          closeModal();
+          cb(list);
+        });
+      });
+  };
+  draw();
+}
+
+function discardDialog(p, n, done) {
+  chooseCardsFromHand(p, n, "Discard — " + p.name,
+    "You are over the safe hand size. Return " + n + " card" + (n > 1 ? "s" : "") + " to the bank.",
+    list => {
+      list.forEach(k => addCard(p, k, -1));
+      note(p.name + " discards " + n + " card" + (n > 1 ? "s" : "") + ".", "bad");
+      render();
+      done();
+    }, { actor: p });
+}
+
+/* a bot asking a person for a swap */
+function aiTradeOffer(bot, human, give, get) {
+  const chips = obj => ALLCARDS.filter(k => obj[k]).map(k =>
+    '<span class="card"><span class="dot" style="background:' + CARDCOLOR[k] + '"></span>' +
+    obj[k] + " " + cap(k) + "</span>").join("");
+  const canPayIt = ALLCARDS.every(k => (get[k] || 0) <= hasCard(human, k));
+  openModal(
+    "<h2>" + esc(bot.name) + " offers a trade</h2>" +
+    '<div class="body">' +
+    '<p class="muted" style="margin-top:0">You would receive</p>' +
+    '<div class="cards">' + chips(give) + "</div>" +
+    '<p class="muted" style="margin-top:13px">You would hand over</p>' +
+    '<div class="cards">' + chips(get) + "</div>" +
+    (canPayIt ? "" : '<p class="muted" style="margin-top:13px">You do not hold that card.</p>') +
+    "</div>" +
+    '<div class="foot"><button class="btn" id="no">Decline</button>' +
+    '<button class="btn primary" id="yes"' + (canPayIt ? "" : " disabled") + ">Accept</button></div>",
+    m => {
+      m.querySelector("#no").addEventListener("click", () => {
+        note(human.name + " declines " + bot.name + "'s offer.");
+        closeModal();
+        render();
+      });
+      m.querySelector("#yes").addEventListener("click", () => {
+        ALLCARDS.forEach(k => {
+          if (give[k]) { addCard(bot, k, -give[k]); addCard(human, k, give[k]); }
+          if (get[k]) { addCard(human, k, -get[k]); addCard(bot, k, get[k]); }
+        });
+        const fmt = o => ALLCARDS.filter(k => o[k]).map(k => o[k] + " " + k).join(", ");
+        note(bot.name + " trades " + fmt(give) + " to " + human.name + " for " + fmt(get) + ".");
+        closeModal();
+        render();
+      });
+    });
+}
+
+function winDialog(p) {
+  openModal(
+    "<h2>" + esc(p.name) + " wins</h2>" +
+    '<div class="body"><p>' + esc(p.name) + " reaches " + totalVP(p) + " victory points and takes Catan.</p>" +
+    '<p class="muted">Final standings</p>' +
+    G.players.slice().sort((a, b) => totalVP(b) - totalVP(a)).map(q =>
+      '<div class="counter"><span class="lab"><span class="swatch" style="background:' + q.color + '"></span>' +
+      esc(q.name) + "</span><b>" + totalVP(q) + " VP</b></div>").join("") +
+    "</div>" +
+    '<div class="foot"><button class="btn" id="cl">Look at the board</button><button class="btn primary" id="ng">New game</button></div>',
+    m => {
+      m.querySelector("#cl").addEventListener("click", closeModal);
+      m.querySelector("#ng").addEventListener("click", () => { closeModal(); newGameDialog(); });
+    });
+}
+
+/* ---------- board click dispatch ---------- */
+function onVertexClick(vid) {
+  const P = G.pending;
+  if (!P) return;
+  switch (P.kind) {
+    case "setupBuilding": placeSetupBuilding(vid); break;
+    case "settlement": doBuildSettlement(vid); break;
+    case "city": doBuildCity(vid, P.discount); break;
+    case "wall": doBuildWall(vid, P.free); break;
+    case "knight": doBuildKnight(vid); break;
+    case "activate": doActivate(vid, P.free); break;
+    case "promote": {
+      const after = P.after;
+      doPromote(vid, P.free);
+      if (after) after();
+      break;
+    }
+    case "knightPick": openKnightMenu(vid); break;
+    case "knightMove": doKnightMove(P.from, vid); break;
+    case "knightDisplace": doKnightDisplace(P.from, vid, false); break;
+    case "intrigue": doKnightDisplace(null, vid, true); break;
+    case "retreat": {
+      G.geo.vertices[vid].knight = P.knight;
+      G.players[P.owner].knightsPlaced.push(vid);
+      note(G.players[P.owner].name + "'s knight retreats.");
+      const after = P.after;
+      G.pending = null;
+      if (after) after(); else render();
+      break;
+    }
+    case "pillage": {
+      pillage(vid, G.players[P.owner]);
+      const after = P.after;
+      G.pending = null;
+      if (after) after(); else render();
+      break;
+    }
+    case "metropolis": placeMetro(vid, cur(), P.track); break;
+    case "deserterPlace": {
+      const p = cur();
+      G.geo.vertices[vid].knight = { p: p.id, str: P.str, active: P.active, actedThisTurn: false };
+      p.knightsPlaced.push(vid);
+      note(p.name + " welcomes the deserter as a knight of strength " + P.str + ".");
+      refreshLongestRoad();
+      clearPending();
+      break;
+    }
+  }
+}
+
+function onEdgeClick(eid) {
+  const P = G.pending;
+  if (!P) return;
+  switch (P.kind) {
+    case "setupRoad": placeSetupRoad(eid); break;
+    case "road": doBuildRoad(eid, false); break;
+    case "ship": doBuildShip(eid, P.free); break;
+    case "shipLift": doLiftShip(eid); break;
+    case "shipDrop": doDropShip(eid, P.from); break;
+    case "freeRoad": {
+      const p = cur();
+      G.geo.edges[eid].road = p.id;
+      p.roadsLeft--;
+      note(p.name + " lays a free road.");
+      refreshLongestRoad();
+      const after = P.after;
+      G.pending = null;
+      if (after) after(); else render();
+      break;
+    }
+    case "diplomat": {
+      const e = G.geo.edges[eid];
+      const owner = e.road;
+      e.road = null;
+      G.players[owner].roadsLeft++;
+      note(cur().name + " has an open road of " + G.players[owner].name + " torn up.", "bad");
+      refreshLongestRoad();
+      if (owner === G.cur) {
+        const spots = legalRoadSpots(G.cur);
+        if (spots.length) {
+          setPending({ kind: "freeRoad", left: 1, edges: spots, hint: "Rebuild your road somewhere else.", after: () => clearPending() });
+          break;
+        }
+      }
+      clearPending();
+      break;
+    }
+  }
+}
+
+function onHexClick(hid) {
+  const P = G.pending;
+  if (!P || !P.hexes || !P.hexes.includes(hid)) return;
+  switch (P.kind) {
+    case "moveRobber": moveRobberTo(hid, false); break;
+    case "movePirate": movePirateTo(hid); break;
+    case "bishop": moveRobberTo(hid, true); break;
+    case "knightRobber": {
+      const k = G.geo.vertices[P.from].knight;
+      k.active = false; k.actedThisTurn = true;
+      moveRobberTo(hid, false);
+      break;
+    }
+    case "merchant": {
+      const p = cur();
+      G.players.forEach(o => { o.hasMerchant = false; });
+      p.hasMerchant = true;
+      G.merchantHex = hid;
+      G.merchantOwner = p.id;
+      note(p.name + " sets up the merchant on the " + TERRAIN[G.geo.hexes[hid].type].label.toLowerCase() + ".");
+      clearPending();
+      checkWin();
+      break;
+    }
+    case "inventorA":
+      setPending({ kind: "inventorB", first: hid, hexes: P.hexes.filter(h => h !== hid), hint: "Inventor: pick the token to swap it with." });
+      break;
+    case "inventorB": {
+      const a = G.geo.hexes[P.first], b = G.geo.hexes[hid];
+      const t = a.num; a.num = b.num; b.num = t;
+      note(cur().name + " swaps the " + b.num + " and the " + a.num + " tokens.");
+      clearPending();
+      break;
+    }
+  }
+}
+
+/* ---------- action panel ---------- */
+function btn(label, sub, fn, disabled, cls) {
+  return '<button class="act ' + (cls || "") + '"' + (disabled ? " disabled" : "") +
+    ' data-fn="' + fn + '"><b>' + esc(label) + "</b>" + (sub ? "<small>" + esc(sub) + "</small>" : "") + "</button>";
+}
+
+const ACTIONS = {};
+function drawActions() {
+  const p = cur();
+  const box = $("acts");
+  box.classList.remove("one");
+  if (G.phase === "over") {
+    box.innerHTML = btn("New game", "Start again", "newGame", false, "primary");
+    bindActions();
+    return;
+  }
+  if (G.pending) {
+    box.classList.add("one");
+    box.innerHTML = '<p class="muted">' + esc(G.pending.hint || "Make the highlighted choice on the board.") +
+      (G.pending.mandatory ? "" : " You can cancel from the bar under the board.") + "</p>";
+    return;
+  }
+  if (isAI(p)) {
+    box.classList.add("one");
+    box.innerHTML = '<p class="muted">' + esc(p.name) + " is taking their turn…</p>";
+    return;
+  }
+  if (G.phase === "setup1" || G.phase === "setup2") {
+    box.classList.add("one");
+    box.innerHTML = '<p class="muted">Follow the prompt on the board to place your opening pieces.</p>';
+    return;
+  }
+
+  let h = "";
+  if (G.phase === "roll") {
+    h += btn("Roll the dice", isCK() ? "2 production dice + event die" : "2 dice", "roll", false, "primary");
+    if (isCK()) {
+      const alch = p.prog.findIndex(c => c === "alchemist");
+      if (alch >= 0) h += btn("Play Alchemist", "Set the dice yourself", "alchemist");
+    } else {
+      const pd = playableDev(p);
+      if (pd.length && !p.devPlayedThisTurn) h += btn("Play a card", pd.length + " available", "cards");
+    }
+  } else {
+    const canRoad = canPay(p, COST.road) && p.roadsLeft > 0;
+    const canSet = canPay(p, COST.settlement) && p.settlementsLeft > 0;
+    const canCity = canPay(p, COST.city) && p.citiesLeft > 0;
+    h += btn("Road", costText(COST.road), "road", !canRoad);
+    h += btn("Settlement", costText(COST.settlement), "settlement", !canSet);
+    h += btn("City", costText(COST.city), "city", !canCity);
+    if (!isCK()) {
+      h += btn("Development card", costText(COST.dev), "dev", !(canPay(p, COST.dev) && G.dev.length));
+      if (isSF()) {
+        h += btn("Ship", costText(COST.ship), "ship",
+          !(canPay(p, COST.ship) && p.shipsLeft > 0 && legalShipSpots(p.id).length));
+        h += btn("Re-sail a ship", p.turnFlags.shipMoved ? "already done this turn" : "move one open ship", "moveShip",
+          !!p.turnFlags.shipMoved || !openShipsOf(p.id).length);
+      }
+    } else {
+      h += btn("City wall", costText(COST.wall), "wall", !(canPay(p, COST.wall) && p.wallsLeft > 0));
+      h += btn("Improve a city", "Spend commodities", "improve");
+      h += btn("Knights", "Hire · activate · promote · act", "knights");
+    }
+    h += btn("Trade with bank", "Ports and ratios", "bank");
+    h += btn("Trade with a player", "Agree it aloud first", "swap", G.players.length < 2);
+    const cards = isCK() ? p.prog.length : playableDev(p).length;
+    h += btn(isCK() ? "Progress cards" : "Play a card", cards + " in hand", "cards", !cards);
+    h += btn("End turn", "Pass to the next player", "end", false, "primary");
+  }
+  box.innerHTML = h;
+  bindActions();
+}
+
+function bindActions() {
+  $("acts").querySelectorAll(".act").forEach(b => {
+    b.addEventListener("click", () => ACTIONS[b.dataset.fn] && ACTIONS[b.dataset.fn]());
+  });
+}
+
+ACTIONS.roll = () => { if (G.phase === "roll") rollDice(null); };
+ACTIONS.alchemist = () => {
+  const i = cur().prog.findIndex(c => c === "alchemist");
+  if (i >= 0) playAlchemist(i);
+};
+ACTIONS.road = () => actBuildRoad(false);
+ACTIONS.ship = () => actBuildShip(false);
+ACTIONS.moveShip = () => actMoveShip();
+ACTIONS.settlement = () => actBuildSettlement();
+ACTIONS.city = () => actBuildCity(false);
+ACTIONS.dev = () => actBuyDev();
+ACTIONS.wall = () => actBuildWall(false);
+ACTIONS.end = () => endTurn();
+ACTIONS.newGame = () => newGameDialog();
+
+ACTIONS.improve = () => {
+  const p = cur();
+  chooseOption("City improvements", "Each level raises your chance of drawing that colour of progress card.",
+    TRACKS.map(t => {
+      const bad = canImprove(p, t);
+      const lvl = p.imp[t];
+      return {
+        label: IMPROVE[t].label + " " + (lvl >= 5 ? "— complete" : "→ level " + (lvl + 1) + (lvl < 5 ? ": " + IMPROVE[t].names[lvl] : "")),
+        sub: (lvl >= 5 ? "Nothing more to build." : "Costs " + improvementCost(p, t) + " " + IMPROVE[t].com +
+          " · you hold " + hasCard(p, IMPROVE[t].com)) + (bad ? " — " + bad : ""),
+        value: t, deck: t, disabled: !!bad
+      };
+    }), t => buyImprovement(t));
+};
+
+ACTIONS.knights = () => {
+  const p = cur();
+  const list = knightsOf(p);
+  const ready = list.filter(x => knightCanAct(p, x));
+  chooseOption("Knights", "You have " + list.length + " knight" + (list.length === 1 ? "" : "s") + " on the board.", [
+    { label: "Hire a knight", sub: costText(COST.knight) + " · basic knights on board: " + knightCounts(p)[1] + "/2", value: "hire",
+      disabled: !canPay(p, COST.knight) || knightCounts(p)[1] >= 2 },
+    { label: "Activate a knight", sub: costText(COST.activate) + " · " + list.filter(x => !x.k.active).length + " idle", value: "act",
+      disabled: !canPay(p, COST.activate) || !list.filter(x => !x.k.active).length },
+    { label: "Promote a knight", sub: costText(COST.promote) + (p.imp.politics < 3 ? " · Fortress needed for mighty knights" : ""), value: "promote",
+      disabled: !canPay(p, COST.promote) },
+    { label: "Take a knight action", sub: ready.length + " knight" + (ready.length === 1 ? "" : "s") + " ready to move, displace or chase the robber", value: "use",
+      disabled: !ready.length }
+  ], v => {
+    if (v === "hire") actBuildKnight();
+    else if (v === "act") actActivateKnight(false);
+    else if (v === "promote") actPromoteKnight(false);
+    else actKnightAction();
+  });
+};
+
+ACTIONS.cards = () => {
+  const p = cur();
+  if (isCK()) {
+    if (!p.prog.length) { toast("You hold no progress cards."); return; }
+    chooseOption("Progress cards", "Play as many as you like on your turn.",
+      p.prog.map((c, i) => ({
+        label: PROG[c].title,
+        sub: PROG[c].text +
+          (c === "alchemist" && G.phase !== "roll" ? " — only playable before you roll." : "") +
+          (c === "bishop" && !G.barbAttacked ? " — the robber is frozen until the barbarians land." : ""),
+        value: i, deck: PROG[c].deck,
+        disabled: (c === "alchemist" && G.phase !== "roll") || (c === "bishop" && !G.barbAttacked)
+      })),
+      i => { if (p.prog[i] === "alchemist") playAlchemist(i); else playProgress(i); });
+  } else {
+    if (p.devPlayedThisTurn) { toast("Only one development card per turn."); return; }
+    const pd = playableDev(p);
+    if (!pd.length) {
+      const vpN = p.dev.filter(d => d === "vp").length;
+      const fresh = p.devBoughtThisTurn.length;
+      toast(!p.dev.length ? "You hold no development cards."
+        : fresh ? "Cards bought this turn cannot be played until your next turn."
+        : vpN ? "Victory point cards stay hidden and are never played."
+        : "Nothing to play right now.");
+      return;
+    }
+    const counts = {};
+    pd.forEach(c => { counts[c] = (counts[c] || 0) + 1; });
+    chooseOption("Development cards", "One per turn, at any point during your turn.",
+      Object.keys(counts).map(c => ({
+        label: DEV_INFO[c].title + (counts[c] > 1 ? " ×" + counts[c] : ""),
+        sub: DEV_INFO[c].text, value: c, deck: "dev"
+      })),
+      c => playDev(c));
+  }
+};
+
+/* ---------- trading ---------- */
+ACTIONS.bank = () => {
+  const p = cur();
+  const rate = tradeRates(p);
+  const goods = isCK() ? ALLCARDS : RES;
+  const give = goods.filter(k => hasCard(p, k) >= rate[k]);
+  if (!give.length) { toast("Nothing in hand reaches a trade ratio yet."); return; }
+  chooseOption("Trade with the bank", "Your best ratios, ports and abilities included.",
+    give.map(k => ({ label: "Give " + rate[k] + " " + k, sub: "You hold " + hasCard(p, k), value: k })),
+    k => {
+      const want = goods.filter(x => x !== k);
+      pickCards("Trade with the bank", "Take one in exchange for " + rate[k] + " " + k + ".", want, 1, sel => {
+        addCard(p, k, -rate[k]);
+        addCard(p, sel[0], 1);
+        note(p.name + " trades " + rate[k] + " " + k + " for 1 " + sel[0] + ".");
+        render();
+      });
+    });
+};
+
+ACTIONS.swap = () => {
+  const p = cur();
+  const others = G.players.filter(o => o.id !== p.id).map(o => o.id);
+  choosePlayer("Trade with a player", "Settle the deal out loud, then record it here.", others, oid => {
+    const o = G.players[oid];
+    const give = {}, get = {};
+    ALLCARDS.forEach(k => { give[k] = 0; get[k] = 0; });
+    const goods = isCK() ? ALLCARDS : RES;
+    const draw = () => {
+      const row = (k, obj, who, tag) =>
+        '<div class="counter"><span class="lab"><span class="dot" style="width:11px;height:11px;border-radius:2px;background:' +
+        CARDCOLOR[k] + '"></span>' + cap(k) + ' <span class="muted">(' + hasCard(who, k) + ")</span></span>" +
+        '<span class="stepper"><button data-m="' + tag + "|" + k + '">−</button><span>' + obj[k] +
+        '</span><button data-p="' + tag + "|" + k + '">+</button></span></div>';
+      openModal(
+        "<h2>Trade with " + esc(o.name) + '</h2><div class="body">' +
+        '<p class="eyebrow" style="color:var(--brown-2)">YOU GIVE</p>' + goods.map(k => row(k, give, p, "g")).join("") +
+        '<p class="eyebrow" style="color:var(--brown-2);margin-top:12px">YOU RECEIVE</p>' + goods.map(k => row(k, get, o, "r")).join("") +
+        "</div>" +
+        '<div class="foot"><button class="btn" id="cx">Cancel</button><button class="btn primary" id="ok">Complete the trade</button></div>',
+        m => {
+          m.querySelectorAll("[data-p]").forEach(b => b.addEventListener("click", () => {
+            const [tag, k] = b.dataset.p.split("|");
+            const obj = tag === "g" ? give : get, who = tag === "g" ? p : o;
+            if (obj[k] < hasCard(who, k)) { obj[k]++; draw(); }
+          }));
+          m.querySelectorAll("[data-m]").forEach(b => b.addEventListener("click", () => {
+            const [tag, k] = b.dataset.m.split("|");
+            const obj = tag === "g" ? give : get;
+            if (obj[k] > 0) { obj[k]--; draw(); }
+          }));
+          m.querySelector("#cx").addEventListener("click", () => { closeModal(); render(); });
+          m.querySelector("#ok").addEventListener("click", () => {
+            const gTot = sum(ALLCARDS.map(k => give[k])), rTot = sum(ALLCARDS.map(k => get[k]));
+            if (!gTot && !rTot) { toast("Set what changes hands first."); return; }
+            if (isAI(o)) {
+              const refuse = aiAcceptsTrade(o, give, get);
+              if (refuse) { toast(o.name + " declines — " + refuse + "."); return; }
+            }
+            ALLCARDS.forEach(k => {
+              if (give[k]) { addCard(p, k, -give[k]); addCard(o, k, give[k]); }
+              if (get[k]) { addCard(o, k, -get[k]); addCard(p, k, get[k]); }
+            });
+            const fmt = obj => ALLCARDS.filter(k => obj[k]).map(k => obj[k] + " " + k).join(", ") || "nothing";
+            note(p.name + " trades " + fmt(give) + " to " + o.name + " for " + fmt(get) + ".");
+            if (isAI(o)) toast(o.name + " accepts the trade.");
+            closeModal();
+            render();
+          });
+        });
+    };
+    draw();
+  });
+};
+
+/* ---------- rules reference ---------- */
+function rulesDialog() {
+  const rows = [
+    ["Road", costText(COST.road)],
+    ["Settlement", costText(COST.settlement)],
+    ["City", costText(COST.city)],
+    isCK() ? ["City wall", costText(COST.wall)] : ["Development card", costText(COST.dev)],
+    isSF() ? ["Ship", costText(COST.ship)] : null,
+    isCK() ? ["Knight", costText(COST.knight)] : null,
+    isCK() ? ["Activate a knight", costText(COST.activate)] : null,
+    isCK() ? ["Promote a knight", costText(COST.promote)] : null,
+    isCK() ? ["City improvement", "level number in matching commodity (1 → 5)"] : null
+  ].filter(Boolean);
+  openModal(
+    "<h2>Costs and rules</h2><div class=\"body\">" +
+    '<table class="costs"><tr><th>Build</th><th>Cost</th></tr>' +
+    rows.map(r => "<tr><td>" + r[0] + "</td><td>" + r[1] + "</td></tr>").join("") + "</table>" +
+    (isCK() ?
+      '<p class="muted" style="margin-top:12px">Cities on forest, pasture and mountains yield 1 resource plus 1 commodity. ' +
+      "Fields and hills yield 2 resources. Level 3 improvements unlock 2:1 commodity trade, mighty knights and the aqueduct. " +
+      "Level 4 claims a metropolis; level 5 protects it. Play to " + G.target + " points.</p>"
+      : isSF() ?
+      '<p class="muted" style="margin-top:12px">Ships run on water, roads on land, and the two join into a single ' +
+      "trade route that may only change over at your own settlement or city — so it is longest trade route here, not longest road. " +
+      "Gold fields pay out in any resource you name. On a seven you move either the robber or the pirate; no ship may be laid " +
+      "alongside the pirate. Your first settlement on each smaller island is worth 2 extra points. Play to " + G.target + " points.</p>"
+      : '<p class="muted" style="margin-top:12px">Longest road and largest army are worth 2 points each. Play to ' + G.target + " points.</p>") +
+    '<div class="rulesbox"><b>Official rulebooks (free from Catan Studio)</b><br>' +
+    '<a href="https://www.catan.com/sites/default/files/2025-03/CN3081%20CATAN%E2%80%93The%20Game%20Rulebook%20secure%20(1).pdf" target="_blank" rel="noopener">Catan — base game rulebook</a><br>' +
+    '<a href="https://www.catan.com/sites/default/files/2025-03/CN3087%20CATAN%E2%80%93Cities&Knights_%20Rulebook.pdf" target="_blank" rel="noopener">Catan — Cities &amp; Knights rulebook and almanac</a><br>' +
+    '<a href="https://www.catan.com/seafarers" target="_blank" rel="noopener">Catan — Seafarers overview and rules</a><br>' +
+    '<a href="https://www.catan.com/understand-catan/game-rules" target="_blank" rel="noopener">All Catan rulebooks</a></div>' +
+    "</div>" +
+    '<div class="foot"><button class="btn primary" id="cl">Close</button></div>',
+    m => m.querySelector("#cl").addEventListener("click", () => { closeModal(); render(); }));
+}
+
+/* ---------- new game ---------- */
+let setupChoice = { mode: "base", count: 3, names: ["", "", "", ""], ai: [false, true, true, true] };
+
+const MODE_BLURB = {
+  base: "The island of Catan as first published: settle, build, trade, and take the longest road or the largest army.",
+  ck:   "Commodities, city improvements and knights. A barbarian ship sails on Catan every time the event die shows it, and only active knights hold the shore.",
+  sf:   "Heading for new shores. Ships carry your network across open water to two smaller islands, gold fields pay out in any resource, and a pirate patrols the sea lanes."
+};
+
+function newGameDialog() {
+  const draw = () => {
+    const seats = [0, 1, 2, 3].slice(0, setupChoice.count).map(i =>
+      '<div class="setup-row"><span class="swatch" style="background:' + PLAYER_COLORS[i].hex + '"></span>' +
+      '<input type="text" id="nm' + i + '" value="' + esc(setupChoice.names[i]) + '" placeholder="' +
+      PLAYER_COLORS[i].name + '" maxlength="16">' +
+      '<div class="seg"><button data-seat="' + i + '" data-ai="0" class="' + (setupChoice.ai[i] ? "" : "on") + '">Human</button>' +
+      '<button data-seat="' + i + '" data-ai="1" class="' + (setupChoice.ai[i] ? "on" : "") + '">Bot</button></div></div>').join("");
+    const humans = setupChoice.ai.slice(0, setupChoice.count).filter(x => !x).length;
+    openModal(
+      "<h2>New game</h2><div class=\"body\">" +
+      '<p class="eyebrow" style="color:var(--brown-2)">RULES SET</p>' +
+      '<div class="seg"><button id="m1" class="' + (setupChoice.mode === "base" ? "on" : "") + '">Base Catan · 10 VP</button>' +
+      '<button id="m2" class="' + (setupChoice.mode === "ck" ? "on" : "") + '">Cities &amp; Knights · 13 VP</button>' +
+      '<button id="m3" class="' + (setupChoice.mode === "sf" ? "on" : "") + '">Seafarers · 14 VP</button></div>' +
+      '<p class="muted" style="margin-top:8px">' + esc(MODE_BLURB[setupChoice.mode]) + "</p>" +
+      '<p class="eyebrow" style="color:var(--brown-2);margin-top:14px">SEATS</p>' +
+      '<div class="seg"><button id="p3" class="' + (setupChoice.count === 3 ? "on" : "") + '">3 players</button>' +
+      '<button id="p4" class="' + (setupChoice.count === 4 ? "on" : "") + '">4 players</button></div>' +
+      '<div class="setup-grid">' + seats + "</div>" +
+      '<p class="muted">' +
+      (humans === 0 ? "All seats are bots — the game will play itself while you watch."
+        : humans === 1 ? "Solo game: you against " + (setupChoice.count - 1) + " bots."
+        : humans + " people share this screen; pass it when the prompt names someone else.") +
+      " Catan needs 3 players, so fill the spare seats with bots to play alone.</p>" +
+      "</div>" +
+      '<div class="foot"><button class="btn primary" id="go">Deal the board</button></div>',
+      m => {
+        const save = () => { for (let i = 0; i < setupChoice.count; i++) setupChoice.names[i] = m.querySelector("#nm" + i).value; };
+        m.querySelector("#m1").addEventListener("click", () => { save(); setupChoice.mode = "base"; draw(); });
+        m.querySelector("#m2").addEventListener("click", () => { save(); setupChoice.mode = "ck"; draw(); });
+        m.querySelector("#m3").addEventListener("click", () => { save(); setupChoice.mode = "sf"; draw(); });
+        m.querySelector("#p3").addEventListener("click", () => { save(); setupChoice.count = 3; draw(); });
+        m.querySelector("#p4").addEventListener("click", () => { save(); setupChoice.count = 4; draw(); });
+        m.querySelectorAll("[data-seat]").forEach(b => b.addEventListener("click", () => {
+          save();
+          setupChoice.ai[+b.dataset.seat] = b.dataset.ai === "1";
+          draw();
+        }));
+        m.querySelector("#go").addEventListener("click", () => {
+          save();
+          closeModal();
+          startGame(setupChoice.mode, setupChoice.count,
+            setupChoice.names.slice(0, setupChoice.count), setupChoice.ai.slice(0, setupChoice.count));
+        });
+      });
+  };
+  draw();
+}
+
+function startGame(mode, count, names, ais) {
+  G.mode = mode;
+  G.target = mode === "ck" ? 13 : mode === "sf" ? 14 : 10;
+  G.players = [];
+  for (let i = 0; i < count; i++) {
+    const bot = !!(ais && ais[i]);
+    const fallback = bot ? PLAYER_COLORS[i].name + " Bot" : PLAYER_COLORS[i].name;
+    const pl = makePlayer(i, (names[i] || "").trim() || fallback);
+    pl.ai = bot;
+    pl.aiTrades = 0;
+    G.players.push(pl);
+  }
+  G.geo = makeBoard(mode);
+  G.robber = G.geo.hexes.findIndex(h => h.type === "desert");
+  G.pirate = mode === "sf" ? G.geo.pirateStart : null;
+  G.merchantHex = null; G.merchantOwner = null;
+  G.dev = shuffle(DEV_BAG.slice());
+  G.progDecks = { trade: [], politics: [], science: [] };
+  Object.keys(PROG).forEach(k => {
+    for (let i = 0; i < PROG[k].n; i++) G.progDecks[PROG[k].deck].push(k);
+  });
+  TRACKS.forEach(t => shuffle(G.progDecks[t]));
+  G.barb = 0; G.barbAttacked = false;
+  G.dice = [null, null]; G.eventDie = null;
+  G.longestRoad = null; G.largestArmy = null;
+  G.winner = null; G.log = []; G.aiSteps = 0; G.modalOpen = false;
+  note(mode === "ck" ? "Cities & Knights — first to 13 points."
+    : mode === "sf" ? "Seafarers, heading for new shores — first to 14 points."
+    : "Catan — first to 10 points.", "hi");
+  note("Place a settlement and a road each, then in reverse order " +
+    (mode === "ck" ? "a city and a road." : "a second settlement and road."));
+  if (mode === "sf") {
+    note("Opening pieces go on the home island. A coastal link may be laid as a road or launched as a ship.");
+    note("Two points wait on each smaller island for whoever settles it first.");
+  }
+  beginSetup();
+}
+
+/* ---------- boot ---------- */
+$("botSpeed").addEventListener("change", e => { AICFG.delay = +e.target.value; scheduleAI(); });
+$("btnNew").addEventListener("click", newGameDialog);
+$("btnRules").addEventListener("click", rulesDialog);
+$("speed").addEventListener("change", e => {
+  AICFG.delay = +e.target.value;
+  scheduleAI();
+});
+$("hintCancel").addEventListener("click", () => {
+  if (G.pending && G.pending.mandatory) return;
+  clearPending();
+});
+$("scrim").addEventListener("click", e => { if (e.target === $("scrim")) { /* keep modal, choices are deliberate */ } });
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape" && G.pending && !G.pending.mandatory) clearPending();
+});
+
+/* ============================================================
+   Computer opponents
+   ============================================================ */
+
+const AICFG = { delay: 480, maxStepsPerTurn: 70 };
+
+function isAI(p) { return !!(p && p.ai); }
+function pendingActor() {
+  if (!G.pending) return null;
+  return G.pending.actor !== undefined && G.pending.actor !== null ? G.pending.actor : G.cur;
+}
+
+/* baseline worth of each good to a bot */
+const AI_VAL = { grain: 1.20, ore: 1.15, brick: 1.05, lumber: 1.00, wool: 0.95, paper: 1.25, cloth: 1.25, coin: 1.25 };
+const pips = n => (n === null || n === undefined ? 0 : 6 - Math.abs(7 - n));
+
+function bestOf(list, score) {
+  let best = null, bestS = -Infinity;
+  list.forEach(x => { const s = score(x); if (s > bestS) { bestS = s; best = x; } });
+  return best;
+}
+
+/* ---------- board evaluation ---------- */
+function vertexScore(vid) {
+  const v = G.geo.vertices[vid];
+  let s = 0;
+  const kinds = {};
+  v.hexes.forEach(hid => {
+    const h = G.geo.hexes[hid], t = TERRAIN[h.type];
+    if (t.gold) { s += pips(h.num) * 1.6; kinds.gold = 1; return; }
+    if (!t.res) return;
+    const w = pips(h.num);
+    s += w * (AI_VAL[t.res] || 1);
+    kinds[t.res] = 1;
+    if (isCK() && t.com) s += w * 0.4;              // commodity land pays off once cities go up
+  });
+  s += Object.keys(kinds).length * 1.7;             // spread beats concentration
+  if (v.port) s += v.port === "any" ? 1.1 : 1.7;
+  if (isSF() && v.hexes.some(hid => {
+    const h = G.geo.hexes[hid];
+    return !h.water && h.island !== G.geo.mainIsland;
+  })) s += 9;                                       // two points for landing there first
+  return s;
+}
+
+/* ---------- seafaring ---------- */
+function aiOtherIslands() {
+  return G.geo.hexes.filter(h => !h.water && h.island !== G.geo.mainIsland);
+}
+
+function aiBestShip(p, spots) {
+  const isles = aiOtherIslands();
+  return bestOf(spots, eid => {
+    const e = G.geo.edges[eid];
+    let s = Math.random() * 0.5;
+    [e.a, e.b].forEach(vid => {
+      const v = G.geo.vertices[vid];
+      if (vertexOnLand(v) && vertexOpen(vid) && !v.knight) s += vertexScore(vid) * 0.8;
+    });
+    if (isles.length) {
+      const d = Math.min.apply(null, isles.map(h => Math.hypot(e.x - h.x, e.y - h.y)));
+      s += Math.max(0, 300 - d) / 24;               // keep the prow pointed at open land
+    }
+    return s;
+  });
+}
+
+function aiPirateHex(p, allowed) {
+  return bestOf(allowed, hid => {
+    let s = Math.random() * 0.4, mine = false;
+    G.geo.hexes[hid].edges.forEach(eid => {
+      const e = G.geo.edges[eid];
+      if (e.road === null || !e.ship) return;
+      if (e.road === p.id) mine = true;
+      else s += 3 + (handCount(G.players[e.road]) > 3 ? 2 : 0);
+    });
+    if (mine) s -= 40;
+    return s;
+  });
+}
+
+function aiPickRaider(p, items) {
+  const enemyShips = G.geo.edges.filter(e => e.road !== null && e.ship && e.road !== p.id).length;
+  const want = enemyShips >= 2 && Math.random() < 0.45 ? "p" : "r";
+  const hit = items.filter(i => i.value === want)[0];
+  return hit ? hit.value : items[0].value;
+}
+
+function aiBestSettlement(p, spots) {
+  return bestOf(spots, vid => vertexScore(vid) + Math.random() * 0.6);
+}
+
+function aiBestRoad(p, spots) {
+  return bestOf(spots, eid => {
+    const e = G.geo.edges[eid];
+    let s = Math.random() * 0.4;
+    [e.a, e.b].forEach(vid => {
+      const v = G.geo.vertices[vid];
+      if (vertexOpen(vid) && !v.knight) s += vertexScore(vid) * 0.6;
+      v.adj.forEach(a => { if (vertexOpen(a)) s += vertexScore(a) * 0.18; });
+    });
+    return s;
+  });
+}
+
+function aiRobberHex(p, allowed) {
+  return bestOf(allowed, hid => {
+    const h = G.geo.hexes[hid];
+    let s = 0, mine = false;
+    h.vertices.forEach(vid => {
+      const v = G.geo.vertices[vid];
+      if (!v.building) return;
+      if (v.building.p === p.id) { mine = true; return; }
+      const o = G.players[v.building.p];
+      s += pips(h.num) * (v.building.type === "city" ? 2 : 1) * (1 + 0.18 * publicVP(o));
+      if (handCount(o) > 3) s += 2;
+    });
+    if (mine) s -= 60;
+    return s + Math.random() * 0.5;
+  });
+}
+
+/* ---------- what a bot is saving up for ---------- */
+function aiTargetCost(p) {
+  if (legalCitySpots(p.id).length && p.citiesLeft > 0) return COST.city;
+  if (p.settlementsLeft > 0 && legalSettlementSpots(p.id, false).length) return COST.settlement;
+  if (isSF() && p.shipsLeft > 0 && legalShipSpots(p.id).length) return COST.ship;
+  if (isCK() && ownsCity(p)) {
+    const t = bestOf(TRACKS.filter(x => p.imp[x] < 5), x => 5 - p.imp[x]);
+    if (t) { const c = {}; c[IMPROVE[t].com] = p.imp[t] + 1; return c; }
+  }
+  if (p.roadsLeft > 0 && legalRoadSpots(p.id).length) return COST.road;
+  return COST.settlement;
+}
+function aiMissing(p, cost) {
+  const miss = {};
+  Object.keys(cost).forEach(k => { const d = cost[k] - hasCard(p, k); if (d > 0) miss[k] = d; });
+  return miss;
+}
+/* cards a bot needs right now are worth more to it than the base rate */
+function aiNeedWeight(p) {
+  const w = {};
+  ALLCARDS.forEach(k => { w[k] = 1; });
+  Object.keys(aiMissing(p, aiTargetCost(p))).forEach(k => { w[k] = 1.65; });
+  return w;
+}
+
+/* the cards a bot is least attached to */
+function aiWorstCards(p, n) {
+  const out = [], pool = {}, need = aiNeedWeight(p);
+  ALLCARDS.forEach(k => { pool[k] = hasCard(p, k); });
+  for (let i = 0; i < n; i++) {
+    let pickK = null, worst = Infinity;
+    ALLCARDS.forEach(k => {
+      if (!pool[k]) return;
+      const score = (AI_VAL[k] || 1) * need[k] - pool[k] * 0.35;   // shed what you are hoarding
+      if (score < worst) { worst = score; pickK = k; }
+    });
+    if (!pickK) break;
+    pool[pickK]--;
+    out.push(pickK);
+  }
+  return out;
+}
+function aiScarcest(p, options) {
+  return bestOf(options, k => -hasCard(p, k) * 2 + (AI_VAL[k] || 1) + Math.random() * 0.3);
+}
+function aiRichestAcrossOpponents(p, options) {
+  return bestOf(options, k => {
+    let n = 0;
+    G.players.forEach(o => { if (o.id !== p.id) n += hasCard(o, k); });
+    return n + Math.random() * 0.3;
+  });
+}
+
+/* ---------- resolving board prompts on a bot's behalf ---------- */
+function aiResolvePending() {
+  const P = G.pending;
+  const p = G.players[pendingActor()];
+  const V = P.vertices || [], E = P.edges || [], H = P.hexes || [];
+  if (!V.length && !E.length && !H.length) return clearPending();
+
+  switch (P.kind) {
+    case "setupBuilding":
+    case "settlement":     return onVertexClick(aiBestSettlement(p, V));
+    case "setupRoad":
+    case "road":
+    case "freeRoad":       return onEdgeClick(aiBestRoad(p, E));
+    case "city":
+    case "wall":
+    case "metropolis":     return onVertexClick(bestOf(V, vid => vertexScore(vid)));
+    case "pillage":        return onVertexClick(bestOf(V, vid => -vertexScore(vid)));  // give up the weakest
+    case "knight":
+    case "deserterPlace":  return onVertexClick(bestOf(V, vid => vertexScore(vid) * 0.4 + Math.random()));
+    case "activate":       return onVertexClick(bestOf(V, vid => G.geo.vertices[vid].knight.str));
+    case "promote":        return onVertexClick(bestOf(V, vid => -G.geo.vertices[vid].knight.str));
+    case "knightPick": {
+      const nearRobber = V.filter(vid => G.geo.vertices[vid].hexes.includes(G.robber));
+      return onVertexClick(nearRobber.length ? nearRobber[0] : V[0]);
+    }
+    case "knightMove":
+    case "knightDisplace":
+    case "intrigue":
+    case "retreat":        return onVertexClick(bestOf(V, vid => vertexScore(vid) + Math.random()));
+    case "ship":
+    case "shipDrop":       return onEdgeClick(aiBestShip(p, E));
+    case "shipLift":       return onEdgeClick(E[Math.floor(Math.random() * E.length)]);
+    case "movePirate":     return onHexClick(aiPirateHex(p, H));
+    case "moveRobber":
+    case "bishop":
+    case "knightRobber":   return onHexClick(aiRobberHex(p, H));
+    case "merchant":       return onHexClick(bestOf(H, hid => pips(G.geo.hexes[hid].num)));
+    case "inventorA":
+      return onHexClick(bestOf(H, hid => {
+        const h = G.geo.hexes[hid];
+        const mine = h.vertices.some(vid => ownsBuildingAt(G.geo.vertices[vid], p.id));
+        return mine ? -pips(h.num) : pips(h.num);        // grab a good number I do not touch
+      }));
+    case "inventorB":
+      return onHexClick(bestOf(H, hid => {
+        const h = G.geo.hexes[hid];
+        const mine = h.vertices.some(vid => ownsBuildingAt(G.geo.vertices[vid], p.id));
+        return mine ? 10 - pips(h.num) : -10;            // and drop it on my own weak hex
+      }));
+    case "diplomat":
+      return onEdgeClick(bestOf(E, eid => (G.geo.edges[eid].road === p.id ? -5 : 5) + Math.random()));
+    default:
+      if (V.length) return onVertexClick(V[0]);
+      if (E.length) return onEdgeClick(E[0]);
+      if (H.length) return onHexClick(H[0]);
+      return clearPending();
+  }
+}
+
+/* ---------- trading with the bank ---------- */
+function aiTradeToward(p, cost) {
+  if ((p.aiTrades || 0) >= 4) return false;
+  const miss = aiMissing(p, cost);
+  const need = Object.keys(miss);
+  if (!need.length) return false;
+  const rate = tradeRates(p);
+  const goods = isCK() ? ALLCARDS : RES;
+  for (const want of need) {
+    for (const give of goods) {
+      if (give === want) continue;
+      const keep = cost[give] || 0;
+      if (hasCard(p, give) - rate[give] < keep) continue;
+      addCard(p, give, -rate[give]);
+      addCard(p, want, 1);
+      p.aiTrades = (p.aiTrades || 0) + 1;
+      note(p.name + " trades " + rate[give] + " " + give + " for 1 " + want + " with the bank.");
+      return true;
+    }
+  }
+  return false;
+}
+
+/* ---------- trading with other players ---------- */
+const bagText = o => ALLCARDS.filter(k => o[k]).map(k => o[k] + " " + k).join(", ");
+
+/* would this bot take the deal? returns null to accept, or a reason to refuse */
+function aiAcceptsTrade(o, give, get) {
+  if (!ALLCARDS.every(k => (get[k] || 0) <= hasCard(o, k))) return "they do not hold those cards";
+  const need = aiNeedWeight(o);
+  const incoming = sum(ALLCARDS.map(k => (give[k] || 0) * (AI_VAL[k] || 1) * need[k]));
+  const outgoing = sum(ALLCARDS.map(k =>
+    (get[k] || 0) * (AI_VAL[k] || 1) * (hasCard(o, k) > 3 ? 0.75 : 1) * (need[k] > 1 ? 1.4 : 1)));
+  if (outgoing === 0) return null;                        // a gift is always welcome
+  if (incoming >= outgoing * 1.02) return null;
+  return incoming < outgoing * 0.6 ? "that is far too one-sided" : "the deal is not quite worth it";
+}
+
+function execTrade(a, b, give, get) {
+  ALLCARDS.forEach(k => {
+    if (give[k]) { addCard(a, k, -give[k]); addCard(b, k, give[k]); }
+    if (get[k])  { addCard(b, k, -get[k]);  addCard(a, k, get[k]); }
+  });
+  note(a.name + " trades " + bagText(give) + " to " + b.name + " for " + bagText(get) + ".");
+}
+
+function aiFindOffer(p) {
+  const target = aiTargetCost(p);
+  const wants = Object.keys(aiMissing(p, target));
+  if (!wants.length) return null;
+  const want = wants[0];
+  const spare = ALLCARDS
+    .filter(k => k !== want && hasCard(p, k) - (target[k] || 0) >= 2)
+    .sort((a, b) => hasCard(p, b) - hasCard(p, a));
+  if (!spare.length) return null;
+  const giveK = spare[0];
+  const give = {}, get = {};
+  give[giveK] = hasCard(p, giveK) >= 5 ? 2 : 1;           // sweeten it when sitting on a pile
+  get[want] = 1;
+  return { give, get, want, giveK };
+}
+
+function offerTradeToHuman(bot, human, offer) {
+  openModal(
+    "<h2>" + esc(bot.name) + " wants to trade</h2>" +
+    '<div class="body"><p>They give you <b>' + bagText(offer.give) +
+    "</b> for your <b>" + bagText(offer.get) + "</b>.</p>" +
+    '<p class="muted">You are holding ' + hasCard(human, offer.want) + " " + offer.want + ".</p></div>" +
+    '<div class="foot"><button class="btn" id="no">Decline</button>' +
+    '<button class="btn primary" id="yes">Accept</button></div>',
+    m => {
+      m.querySelector("#yes").addEventListener("click", () => {
+        execTrade(bot, human, offer.give, offer.get);
+        closeModal(); render();
+      });
+      m.querySelector("#no").addEventListener("click", () => {
+        note(human.name + " turns down " + bot.name + "'s offer.");
+        closeModal(); render();
+      });
+    });
+}
+
+function aiProposeTrade(p) {
+  if (p.aiOffered) return false;
+  p.aiOffered = true;                                     // one attempt per turn, whatever happens
+  const offer = aiFindOffer(p);
+  if (!offer) return false;
+  const partners = G.players.filter(o => o.id !== p.id && hasCard(o, offer.want) > 0);
+  if (!partners.length) return false;
+
+  const human = partners.find(o => !isAI(o));
+  const bots = partners.filter(isAI);
+  const askBots = () => {
+    for (const o of bots) {
+      if (!aiAcceptsTrade(o, offer.give, offer.get)) { execTrade(p, o, offer.give, offer.get); return true; }
+    }
+    return false;
+  };
+  // let the person at the table see roughly half the offers
+  if (human && Math.random() < 0.55) { offerTradeToHuman(p, human, offer); return true; }
+  if (askBots()) return true;
+  if (human) { offerTradeToHuman(p, human, offer); return true; }
+  return false;
+}
+
+/* ---------- picking the dice with Alchemist ---------- */
+function aiBestRoll(p) {
+  let bestTotal = 8, bestVal = -1;
+  for (let t = 2; t <= 12; t++) {
+    if (t === 7) continue;
+    let v = 0;
+    G.geo.hexes.forEach(h => {
+      if (h.num !== t || h.id === G.robber || !TERRAIN[h.type].res) return;
+      h.vertices.forEach(vid => {
+        const vx = G.geo.vertices[vid];
+        if (vx.building && vx.building.p === p.id) v += vx.building.type === "city" ? 2 : 1;
+      });
+    });
+    if (v > bestVal) { bestVal = v; bestTotal = t; }
+  }
+  const a = Math.max(1, bestTotal - 6);
+  return { dice: [a, bestTotal - a], value: bestVal, total: bestTotal };
+}
+
+/* ---------- development cards (base game) ---------- */
+function aiPlayDev(p) {
+  if (p.devPlayedThisTurn) return false;
+  const pd = playableDev(p);
+  if (!pd.length) return false;
+  const robberOnMe = G.geo.hexes[G.robber].vertices.some(vid => ownsBuildingAt(G.geo.vertices[vid], p.id));
+  if (pd.includes("knight") && (robberOnMe || p.playedKnights >= 2 || Math.random() < 0.4)) {
+    playDev("knight"); return true;
+  }
+  if (pd.includes("monopoly")) {
+    let bestN = 0;
+    RES.forEach(k => { let n = 0; G.players.forEach(o => { if (o.id !== p.id) n += o.res[k]; }); bestN = Math.max(bestN, n); });
+    if (bestN >= 3) { playDev("monopoly"); return true; }
+  }
+  if (pd.includes("yearOfPlenty")) {
+    const miss = Object.keys(aiMissing(p, aiTargetCost(p))).length;
+    if (miss >= 1 && miss <= 2) { playDev("yearOfPlenty"); return true; }
+  }
+  if (pd.includes("roadBuilding") && p.roadsLeft >= 2 && legalRoadSpots(p.id).length) {
+    playDev("roadBuilding"); return true;
+  }
+  return false;
+}
+
+/* ---------- progress cards (Cities & Knights) ---------- */
+function aiAdjHexes(p, kind) {
+  let n = 0;
+  G.geo.hexes.forEach(h => {
+    if (h.type !== kind) return;
+    if (h.vertices.some(vid => ownsBuildingAt(G.geo.vertices[vid], p.id))) n++;
+  });
+  return n;
+}
+function aiUnwalledCities(p) {
+  return G.geo.vertices.filter(v => v.building && v.building.p === p.id &&
+    v.building.type === "city" && !v.building.wall);
+}
+function aiEnemyKnightsOnMyRoads(p) {
+  return G.geo.vertices.filter(v => v.knight && v.knight.p !== p.id &&
+    v.edges.some(e => G.geo.edges[e].road === p.id));
+}
+
+/* how much a bot rates a card in the position in front of it; 0 means do not play */
+function aiProgWorth(p, c) {
+  const opp = G.players.filter(o => o.id !== p.id);
+  const myVP = totalVP(p);
+  switch (c) {
+    case "irrigation":       return aiAdjHexes(p, "fields") * 2;
+    case "mining":           return aiAdjHexes(p, "mountains") * 2;
+    case "resourceMonopoly": {
+      let m = 0;
+      RES.forEach(k => { let n = 0; opp.forEach(o => { n += Math.min(2, o.res[k]); }); m = Math.max(m, n); });
+      return m;
+    }
+    case "tradeMonopoly": {
+      let m = 0;
+      COM.forEach(k => { let n = 0; opp.forEach(o => { if (o.com[k]) n++; }); m = Math.max(m, n); });
+      return m * 1.5;
+    }
+    case "warlord":
+      return knightsOf(p).filter(x => !x.k.active).length * (G.barb >= BARB_TRACK - 2 ? 3.5 : 1.2);
+    case "smith":
+      return knightsOf(p).filter(x => x.k.str < 3 && !(x.k.str === 2 && p.imp.politics < 3)).length * 2.2;
+    case "engineer":       return aiUnwalledCities(p).length && p.wallsLeft > 0 ? 3.2 : 0;
+    case "medicine":       return legalCitySpots(p.id).length && canPay(p, { ore: 2, grain: 1 }) ? 4.5 : 0;
+    case "roadBuildingP":  return p.roadsLeft >= 1 && legalRoadSpots(p.id).length ? 3.2 : 0;
+    case "crane":          return ownsCity(p) && TRACKS.some(t => p.imp[t] < 5) ? 2.6 : 0;
+    case "wedding":        return opp.filter(o => totalVP(o) > myVP && handCount(o) > 0).length * 2.2;
+    case "masterMerchant": return opp.some(o => totalVP(o) > myVP && handCount(o) > 1) ? 4 : 0;
+    case "saboteur":       return opp.filter(o => totalVP(o) >= myVP && handCount(o) >= 6).length * 2;
+    case "spy":            return opp.some(o => o.prog.length) ? 2.6 : 0;
+    case "bishop":         return G.barbAttacked ? 3.2 : 0;   // robber is frozen before the first landing
+    case "merchant":       return p.hasMerchant ? 0.4 : 3.4;
+    case "merchantFleet":  return 1.2;
+    case "deserter":       return opp.some(o => knightsOf(o).length) ? 2.6 : 0;
+    case "intrigue":       return aiEnemyKnightsOnMyRoads(p).length ? 3.2 : 0;
+    case "diplomat":       return openRoads().some(e => G.geo.edges[e].road !== p.id) ? 1.6 : 0;
+    case "inventor":
+      return G.geo.hexes.filter(h => h.num !== null && ![2, 6, 8, 12].includes(h.num)).length >= 2 ? 1.4 : 0;
+    case "commercialHarbor":
+      return sum(RES.map(r => p.res[r])) > 0 &&
+             opp.some(o => sum(COM.map(k => o.com[k])) > 0) ? 2.2 : 0;
+    default: return 0;                                        // alchemist is handled before the roll
+  }
+}
+
+function aiPlayProgress(p) {
+  if (!p.prog.length) return false;
+  const ranked = p.prog
+    .map((c, i) => ({ c, i, w: (p.aiSkip && p.aiSkip[c]) ? 0 : aiProgWorth(p, c) + Math.random() * 0.4 }))
+    .filter(x => x.w > 0)
+    .sort((a, b) => b.w - a.w);
+  if (!ranked.length) return false;
+  const top = ranked[0];
+  // a full hand has to be spent or it costs you future draws; otherwise hold out for a strong play
+  if (p.prog.length < 4 && top.w < 3) return false;
+  const count = () => p.prog.filter(y => y === top.c).length;
+  const before = count();
+  playProgress(top.i);
+  if (count() < before) return true;
+  p.aiSkip = p.aiSkip || {};
+  p.aiSkip[top.c] = true;                        // it refused to resolve; leave it alone this turn
+  return false;
+}
+
+/* ---------- one action slot ---------- */
+function aiOneAction(p) {
+  const spotsCity = legalCitySpots(p.id);
+  const spotsSettle = legalSettlementSpots(p.id, false);
+  const spotsRoad = legalRoadSpots(p.id);
+
+  if (isCK()) {
+    // keep the island defended when the ship is closing in
+    const danger = G.barb >= BARB_TRACK - 2;
+    const idle = knightsOf(p).filter(x => !x.k.active);
+    if (danger && idle.length && canPay(p, COST.activate)) { actActivateKnight(false); return true; }
+    if (danger && !knightsOf(p).length && canPay(p, COST.knight) && legalKnightSpots(p.id).length) {
+      actBuildKnight(); return true;
+    }
+    // improvements: chase the level 3 perks first, then a metropolis
+    const track = bestOf(TRACKS.filter(t => !canImprove(p, t)),
+      t => (p.imp[t] < 3 ? 3 - p.imp[t] : 0) + (p.imp[t] === 3 ? 2.5 : 0) + Math.random() * 0.4);
+    if (track) { buyImprovement(track); return true; }
+  }
+
+  if (spotsCity.length && p.citiesLeft > 0 && canPay(p, COST.city)) { actBuildCity(false); return true; }
+  if (spotsSettle.length && p.settlementsLeft > 0 && canPay(p, COST.settlement)) { actBuildSettlement(); return true; }
+
+  if (isCK()) {
+    if (knightCounts(p)[1] < 2 && knightsOf(p).length < 3 && canPay(p, COST.knight) && legalKnightSpots(p.id).length) {
+      actBuildKnight(); return true;
+    }
+    if (canPay(p, COST.promote) && knightsOf(p).some(x => x.k.str === 1)) { actPromoteKnight(false); return true; }
+    if (aiUnwalledCities(p).length && p.wallsLeft > 0 && p.res.brick >= 4) { actBuildWall(false); return true; }
+    if (aiPlayProgress(p)) return true;
+  } else {
+    if (isSF() && p.shipsLeft > 0 && canPay(p, COST.ship) && !spotsSettle.length &&
+        legalShipSpots(p.id).length) {
+      actBuildShip(false); return true;                 // keep pushing toward the islands
+    }
+    if (aiPlayDev(p)) return true;
+    if (G.dev.length && canPay(p, COST.dev) && (!spotsSettle.length || Math.random() < 0.45)) {
+      actBuyDev(); return true;
+    }
+  }
+
+  if (spotsRoad.length && p.roadsLeft > 0 && canPay(p, COST.road) && !spotsSettle.length) {
+    actBuildRoad(false); return true;
+  }
+
+  if (aiProposeTrade(p)) return true;             // a player trade beats 4:1 at the bank
+
+  const targets = [];
+  if (spotsCity.length && p.citiesLeft > 0) targets.push(COST.city);
+  if (p.settlementsLeft > 0 && spotsRoad.length) targets.push(COST.settlement);
+  if (isCK() && ownsCity(p)) {
+    const t = bestOf(TRACKS.filter(x => p.imp[x] < 5), x => (x < 3 ? 3 - p.imp[x] : 1));
+    if (t) { const c = {}; c[IMPROVE[t].com] = p.imp[t] + 1; targets.push(c); }
+  }
+  if (isSF() && p.shipsLeft > 0 && legalShipSpots(p.id).length) targets.push(COST.ship);
+  if (p.roadsLeft > 0) targets.push(COST.road);
+  for (const t of targets) if (aiTradeToward(p, t)) return true;
+
+  return false;
+}
+
+/* ---------- the driver ---------- */
+let aiTimer = null;
+function scheduleAI() {
+  if (aiTimer) clearTimeout(aiTimer);
+  aiTimer = setTimeout(aiStep, AICFG.delay);
+}
+
+/* cheap fingerprint of a bot's position, used to notice when it is spinning */
+function aiSignature(p) {
+  return [handCount(p), p.prog.length, p.dev.length, p.roadsLeft, p.shipsLeft, p.settlementsLeft,
+    p.citiesLeft, p.wallsLeft, p.imp.trade, p.imp.politics, p.imp.science,
+    p.knightsPlaced.length, knightStrengthOf(p.id), G.pending ? G.pending.kind : "-"].join(",");
+}
+
+function aiStep() {
+  aiTimer = null;
+  if (G.phase === "over" || G.modalOpen) return;
+  const keepGoing = () => { if (!G.modalOpen && G.phase !== "over") render(); };
+
+  if (G.pending) {
+    const a = pendingActor();
+    if (a !== null && isAI(G.players[a])) {
+      try { aiResolvePending(); }
+      catch (e) { note("The bot stumbled: " + e.message, "bad"); clearPending(); }
+      keepGoing();
+    }
+    return;
+  }
+
+  const p = cur();
+  if (!isAI(p)) return;
+
+  G.aiSteps = (G.aiSteps || 0) + 1;
+  if (G.aiSteps > AICFG.maxStepsPerTurn) { endTurn(); keepGoing(); return; }
+
+  if (G.phase === "roll") {
+    p.aiTrades = 0;
+    p.aiSkip = {};
+    p.aiOffered = false;
+    if (!isCK() && aiPlayDev(p)) { keepGoing(); return; }
+    if (isCK()) {
+      const idx = p.prog.indexOf("alchemist");
+      if (idx >= 0) {
+        const plan = aiBestRoll(p);
+        if (plan.value >= 3) {
+          p.aiAlchemy = plan.dice;
+          playAlchemist(idx);
+          keepGoing();
+          return;
+        }
+      }
+    }
+    ACTIONS.roll();
+    keepGoing();
+    return;
+  }
+
+  if (G.phase === "main") {
+    const before = aiSignature(p);
+    let acted = false;
+    try { acted = aiOneAction(p); }
+    catch (e) { note("The bot stumbled: " + e.message, "bad"); acted = false; }
+    if (acted && aiSignature(p) === before && !G.modalOpen) {
+      G.aiStuck = (G.aiStuck || 0) + 1;
+      if (G.aiStuck > 3) acted = false;            // the move is not landing; stop trying
+    } else {
+      G.aiStuck = 0;
+    }
+    if (!acted) endTurn();
+    keepGoing();
+    return;
+  }
+  keepGoing();
+}
+
+/* ---------- boot ---------- */
+newGameDialog();
+</script>
+</body></html>

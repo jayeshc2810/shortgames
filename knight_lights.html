@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Knight Lights</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Limelight&family=Outfit:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0}
+[hidden]{display:none!important}
+/* Layout: one centred brass-framed NxN chessboard of bulbs; controls above, move log + rules below. Single dark look by choice (bulbs need a dark room). */
+:root{
+  --bg:#13151d;
+  --sq-a:#1c1f2c;
+  --sq-b:#262a3b;
+  --brass:#c9a35a;
+  --brass-dk:#7d6332;
+  --ink:#ece6d6;
+  --muted:#8e90a6;
+  --glass:#3b4054;
+  --glass-dk:#1b1e29;
+  --fil-off:#6d7186;
+  --glow:#ffc24a;
+  --glow-hot:#fff3c9;
+  --glow-edge:#e2861c;
+  --halo:rgba(255,186,64,.55);
+  --halo-wide:rgba(255,160,40,.22);
+  --hint:#7fd1c7;
+  --overlay:rgba(14,15,22,.86);
+  --display:'Limelight', 'Georgia', serif;
+  --body:'Outfit', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono:'JetBrains Mono', ui-monospace, 'SFMono-Regular', Menlo, monospace;
+  color-scheme:dark;
+}
+html,body{background:var(--bg);color:var(--ink);height:100%}
+body{
+  font-family:var(--body);font-size:15px;line-height:1.5;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));
+  padding-right:max(16px, env(safe-area-inset-right, 0px));
+  padding-block:24px 40px;
+  box-sizing:border-box;
+  background:
+    radial-gradient(ellipse at 50% 35%, rgba(255,190,80,.07), transparent 60%),
+    var(--bg);
+}
+.wrap{max-width:480px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+
+header{display:flex;flex-direction:column;gap:4px;align-items:flex-start}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(34px,9vw,46px);line-height:1;margin:0;letter-spacing:.02em;color:var(--glow);text-shadow:0 0 18px var(--halo-wide);text-wrap:balance}
+h1 span{color:var(--ink);text-shadow:none}
+.sub{color:var(--muted);margin:0;max-width:40ch}
+
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.left{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--brass-dk);border-radius:999px;padding:3px;gap:2px}
+.seg button{all:unset;cursor:pointer;font-size:13px;font-weight:500;padding:5px 12px;border-radius:999px;color:var(--muted)}
+.seg button[aria-pressed="true"]{background:var(--brass);color:var(--bg)}
+.size{display:inline-flex;align-items:center;border:1px solid var(--brass-dk);border-radius:999px;padding:3px;gap:2px}
+.size label{font-size:13px;color:var(--muted);padding:0 4px 0 10px}
+.size button{all:unset;cursor:pointer;width:26px;height:26px;border-radius:50%;text-align:center;line-height:26px;font-weight:600;color:var(--ink)}
+.size button:hover{background:var(--sq-b)}
+.size button:disabled{opacity:.3;cursor:default}
+.size input{
+  all:unset;width:2.6ch;text-align:center;font-family:var(--mono);font-size:14px;color:var(--glow);
+  font-variant-numeric:tabular-nums;-moz-appearance:textfield;
+}
+.size input::-webkit-outer-spin-button,.size input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.size .x{font-family:var(--mono);font-size:13px;color:var(--muted);padding-right:4px}
+.stats{font-family:var(--mono);font-size:13px;color:var(--muted);display:flex;gap:14px;font-variant-numeric:tabular-nums}
+.stats b{color:var(--ink);font-weight:500}
+
+.stage{position:relative;container-type:inline-size}
+.board{
+  --n:3;
+  display:grid;grid-template-columns:repeat(var(--n),1fr);
+  width:100%;max-width:100%;aspect-ratio:1;box-sizing:border-box;
+  padding:10px;border-radius:8px;
+  background:linear-gradient(145deg,#d9b56a,var(--brass) 40%,var(--brass-dk));
+  box-shadow:0 20px 50px rgba(0,0,0,.45), inset 0 0 0 1px rgba(255,255,255,.15);
+}
+.cell{
+  all:unset;position:relative;cursor:pointer;min-width:0;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:var(--sq-a);
+  -webkit-tap-highlight-color:transparent;
+  font-size:calc(100cqi / var(--n) * 0.16);
+}
+.cell.alt{background:var(--sq-b)}
+.cell:focus-visible{outline:2px solid var(--hint);outline-offset:-3px}
+.coord{position:absolute;left:.4em;bottom:.2em;font-family:var(--mono);font-size:max(8px,.75em);color:var(--muted);opacity:.7}
+
+.bulb{
+  position:relative;width:52%;aspect-ratio:1;border-radius:50%;
+  background:radial-gradient(circle at 35% 30%, var(--glass), var(--glass-dk) 72%);
+  box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.08), inset -4px -6px 10px rgba(0,0,0,.35);
+  transition:background .22s ease, box-shadow .28s ease, transform .18s ease;
+}
+.bulb::before{ /* filament */
+  content:"";position:absolute;left:50%;top:44%;width:30%;height:20%;transform:translateX(-50%);
+  border:2px solid var(--fil-off);border-top:none;border-radius:0 0 50% 50%;box-sizing:border-box;
+  transition:border-color .22s ease;
+}
+.bulb::after{ /* glass highlight */
+  content:"";position:absolute;left:22%;top:16%;width:22%;height:14%;border-radius:50%;
+  background:rgba(255,255,255,.18);transform:rotate(-25deg);
+}
+.base{
+  width:24%;height:9%;margin-top:-3%;border-radius:0 0 4px 4px;
+  background:repeating-linear-gradient(180deg,var(--brass) 0 2px,var(--brass-dk) 2px 4px);
+}
+.cell.on .bulb{
+  background:radial-gradient(circle at 42% 38%, var(--glow-hot), var(--glow) 42%, var(--glow-edge) 88%);
+  box-shadow:0 0 calc(18px * 3 / var(--n)) calc(4px * 3 / var(--n)) var(--halo), 0 0 calc(60px * 3 / var(--n)) calc(14px * 3 / var(--n)) var(--halo-wide), inset 0 0 0 1.5px rgba(255,255,255,.3);
+}
+.cell.on .bulb::before{border-color:var(--glow-hot)}
+.cell:active .bulb{transform:scale(.94)}
+
+/* knight-move preview on hover */
+.cell.target::after{
+  content:"♞";position:absolute;right:.35em;top:.1em;font-size:1.1em;color:var(--brass);opacity:.9;
+}
+.cell.source{box-shadow:inset 0 0 0 2px rgba(201,163,90,.45)}
+.cell.hint .bulb{animation:hint 0.6s ease-in-out 3}
+@keyframes hint{50%{box-shadow:0 0 0 5px var(--hint), 0 0 20px 5px var(--hint)}}
+.cell.hinted::before{
+  content:"";position:absolute;inset:12%;border:2px dashed var(--hint);border-radius:50%;pointer-events:none;
+}
+
+.board.won .bulb{animation:chase 1.2s ease-in-out 2}
+@keyframes chase{0%,100%{filter:brightness(1)}50%{filter:brightness(1.6)}}
+
+.win{
+  position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+  background:var(--overlay);border-radius:8px;text-align:center;padding:20px;
+  backdrop-filter:blur(2px);
+}
+.win h2{font-family:var(--display);font-weight:400;font-size:clamp(28px,8vw,40px);margin:0;color:var(--glow);text-shadow:0 0 20px var(--halo)}
+.win p{margin:0;color:var(--ink)}
+.win .row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:6px}
+
+.btn{
+  all:unset;cursor:pointer;font-weight:600;font-size:14px;padding:9px 16px;border-radius:6px;
+  border:1px solid var(--brass-dk);color:var(--ink);
+}
+.btn.primary{background:var(--glow);border-color:var(--glow);color:var(--bg)}
+.btn:hover{border-color:var(--brass)}
+.btn[aria-pressed="true"]{border-color:var(--hint);color:var(--hint)}
+.btn:focus-visible,.seg button:focus-visible,.size button:focus-visible,.size input:focus-visible{outline:2px solid var(--hint);outline-offset:2px}
+.controls{display:flex;gap:10px;flex-wrap:wrap}
+
+.log{font-family:var(--mono);font-size:13px;color:var(--muted);min-height:1.5em;margin:0;overflow-wrap:anywhere}
+.log b{color:var(--glow);font-weight:500}
+.rules{color:var(--muted);font-size:14px;margin:0;border-top:1px solid var(--sq-b);padding-top:12px;max-width:62ch}
+.rules strong{color:var(--ink);font-weight:500}
+
+@media (prefers-reduced-motion: reduce){
+  .bulb,.bulb::before{transition:none}
+  .board.won .bulb,.cell.hint .bulb{animation:none}
+  .cell.hint .bulb{box-shadow:0 0 0 4px var(--hint)}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>Knight <span>Lights</span></h1>
+    <p class="sub">Every bulb is wired to the squares a chess knight can jump to. Light them all.</p>
+  </header>
+
+  <div class="bar">
+    <div class="left">
+      <div class="size" role="group" aria-label="Board size">
+        <label for="size-input">Size</label>
+        <button id="size-dec" aria-label="Smaller board">−</button>
+        <input id="size-input" type="number" min="2" max="10" value="3" inputmode="numeric">
+        <span class="x" id="size-x">×3</span>
+        <button id="size-inc" aria-label="Bigger board">+</button>
+      </div>
+      <div class="seg" role="group" aria-label="Starting board">
+        <button id="mode-dark" aria-pressed="true">All dark</button>
+        <button id="mode-mix" aria-pressed="false">Scrambled</button>
+      </div>
+    </div>
+    <div class="stats"><span>Moves <b id="moves">0</b></span><span>Par <b id="par">9</b></span></div>
+  </div>
+
+  <div class="stage">
+    <div class="board" id="board" aria-label="Bulb board"></div>
+    <div class="win" id="win" hidden>
+      <h2>All lit!</h2>
+      <p id="win-msg">Solved in 9 moves.</p>
+      <div class="row">
+        <button class="btn primary" id="win-retry">Retry</button>
+        <button class="btn" id="win-new">New puzzle</button>
+        <button class="btn" id="win-bigger">Try bigger</button>
+      </div>
+    </div>
+  </div>
+
+  <p class="log" id="log">Tap any bulb to start.</p>
+
+  <div class="controls">
+    <button class="btn" id="retry">Retry</button>
+    <button class="btn" id="hint">Hint (2 left)</button>
+    <button class="btn" id="sound" aria-pressed="true">Sound on</button>
+  </div>
+
+  <p class="rules"><strong>How it works.</strong> Tapping a bulb flips it and every bulb a knight's move away (on, or off if already lit). Hover a square to see its links. Any size from 2×2 to 10×10 can be solved from all dark. Order never matters, and tapping a bulb twice cancels out, so a solution is just a set of squares to tap once. You get <strong>2 hints per puzzle</strong>; each one marks a single good next tap.</p>
+</div>
+
+<script>
+(function(){
+  const MIN = 2, MAX = 10;
+  const JUMPS = [[1,2],[2,1],[-1,2],[-2,1],[1,-2],[2,-1],[-1,-2],[-2,-1]];
+  const pop = m => { let k = 0; while (m) { k += Number(m & 1n); m >>= 1n; } return k; };
+  const bit = i => 1n << BigInt(i);
+
+  // per-size data
+  let N, CELLS, ALL, LINKS, EFFECT;
+  function build(n){
+    N = n; CELLS = n*n; ALL = bit(CELLS) - 1n;
+    LINKS = Array.from({length:CELLS}, (_, i) => {
+      const r = Math.floor(i / n), c = i % n;
+      return JUMPS.map(([dr,dc]) => [r+dr, c+dc])
+        .filter(([a,b]) => a >= 0 && a < n && b >= 0 && b < n)
+        .map(([a,b]) => a*n + b);
+    });
+    EFFECT = LINKS.map((l, i) => l.reduce((m, j) => m | bit(j), bit(i)));
+  }
+  // chess-style name: files a.., ranks 1.. from the bottom
+  const name = i => String.fromCharCode(97 + i % N) + (N - Math.floor(i / N));
+
+  // Shortest set of taps that turns `state` all-lit: Gaussian elimination over GF(2), then search the null space.
+  function solve(state){
+    const target = ALL ^ state;
+    const rows = EFFECT.map((e, c) => ({ m: e, r: (target >> BigInt(c)) & 1n })); // matrix is symmetric
+    const pivCol = []; let r = 0;
+    for (let col = 0; col < CELLS && r < CELLS; col++){
+      const b = bit(col);
+      let k = r; while (k < CELLS && !(rows[k].m & b)) k++;
+      if (k === CELLS) continue;
+      [rows[r], rows[k]] = [rows[k], rows[r]];
+      for (let i = 0; i < CELLS; i++) if (i !== r && (rows[i].m & b)){ rows[i].m ^= rows[r].m; rows[i].r ^= rows[r].r; }
+      pivCol.push(col); r++;
+    }
+    for (let i = r; i < CELLS; i++) if (rows[i].r) return null; // unsolvable
+    let x = 0n;
+    pivCol.forEach((col, i) => { if (rows[i].r) x |= bit(col); });
+    const isPiv = new Set(pivCol), basis = [];
+    for (let f = 0; f < CELLS; f++){
+      if (isPiv.has(f)) continue;
+      let v = bit(f);
+      pivCol.forEach((col, i) => { if (rows[i].m & bit(f)) v |= bit(col); });
+      basis.push(v);
+    }
+    let best = x, bw = pop(x);
+    if (basis.length <= 12){
+      for (let m = 1; m < (1 << basis.length); m++){
+        let y = x; for (let j = 0; j < basis.length; j++) if (m >> j & 1) y ^= basis[j];
+        const w = pop(y); if (w < bw){ best = y; bw = w; }
+      }
+    }
+    return best;
+  }
+
+  const MAX_HINTS = 2;
+  let S = { n:3, state:0n, start:0n, moves:0, mode:'dark', log:'', soundOn:true, won:false, hintsLeft:MAX_HINTS, hinted:-1 };
+  let par = 0, solution = 0n;
+
+  const $ = id => document.getElementById(id);
+  const board = $('board');
+  let cells = [];
+
+  function layout(){
+    build(S.n);
+    board.style.setProperty('--n', N);
+    board.innerHTML = '';
+    cells = [];
+    for (let i = 0; i < CELLS; i++){
+      const b = document.createElement('button');
+      b.className = 'cell' + ((Math.floor(i/N) + i%N) % 2 ? ' alt' : '');
+      b.id = 'cell-' + i;
+      b.innerHTML = '<span class="bulb"></span><span class="base"></span><span class="coord">' + name(i) + '</span>';
+      b.addEventListener('click', () => press(i));
+      b.addEventListener('pointerenter', () => preview(i, true));
+      b.addEventListener('pointerleave', () => preview(i, false));
+      b.addEventListener('focus', () => preview(i, true));
+      b.addEventListener('blur', () => preview(i, false));
+      board.appendChild(b);
+      cells.push(b);
+    }
+  }
+
+  function preview(i, on){
+    cells[i].classList.toggle('source', on);
+    LINKS[i].forEach(j => cells[j].classList.toggle('target', on));
+  }
+
+  // tiny synth click
+  let ctx = null;
+  function tone(lit){
+    if (!S.soundOn) return;
+    try{
+      ctx = ctx || new (window.AudioContext || window.webkitAudioContext)();
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type = 'triangle';
+      o.frequency.value = lit ? 660 : 330;
+      g.gain.setValueAtTime(0.12, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.18);
+      o.connect(g).connect(ctx.destination);
+      o.start(); o.stop(ctx.currentTime + 0.2);
+    }catch(e){}
+  }
+  function fanfare(){
+    if (!S.soundOn || !ctx) return;
+    [523,659,784,1047].forEach((f,k) => {
+      const o = ctx.createOscillator(), g = ctx.createGain(), t = ctx.currentTime + k*0.11;
+      o.type = 'triangle'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.14, t+0.02);
+      g.gain.exponentialRampToValueAtTime(0.001, t+0.3);
+      o.connect(g).connect(ctx.destination); o.start(t); o.stop(t+0.32);
+    });
+  }
+
+  function render(stagger){
+    solution = S.won ? 0n : (solve(S.state) || 0n);
+    for (let i = 0; i < CELLS; i++){
+      const on = !!((S.state >> BigInt(i)) & 1n);
+      const bulb = cells[i].firstChild;
+      bulb.style.transitionDelay = stagger && stagger[i] ? stagger[i] + 'ms' : '0ms';
+      cells[i].classList.toggle('on', on);
+      cells[i].classList.toggle('hinted', i === S.hinted);
+      cells[i].setAttribute('aria-label', 'Bulb ' + name(i) + (on ? ', lit' : ', off'));
+      cells[i].setAttribute('aria-pressed', on);
+    }
+    $('moves').textContent = S.moves;
+    $('par').textContent = par;
+    $('log').innerHTML = S.log || 'Tap any bulb to start.';
+    $('size-input').value = S.n;
+    $('size-x').textContent = '×' + S.n;
+    $('size-dec').disabled = S.n <= MIN;
+    $('size-inc').disabled = S.n >= MAX;
+    $('win-bigger').hidden = S.n >= MAX;
+    $('mode-dark').setAttribute('aria-pressed', S.mode === 'dark');
+    $('mode-mix').setAttribute('aria-pressed', S.mode === 'mix');
+    $('hint').textContent = 'Hint (' + S.hintsLeft + ' left)';
+    $('hint').disabled = S.won || (S.hintsLeft === 0 && S.hinted < 0);
+    $('hint').style.opacity = $('hint').disabled ? .4 : '';
+    $('sound').textContent = S.soundOn ? 'Sound on' : 'Sound off';
+    $('sound').setAttribute('aria-pressed', S.soundOn);
+    $('win').hidden = !S.won;
+    board.classList.toggle('won', S.won);
+    if (S.won){
+      const used = MAX_HINTS - S.hintsLeft;
+      $('win-msg').textContent = (S.moves === par
+        ? S.n + '×' + S.n + ' solved in ' + S.moves + ' moves. That is par.'
+        : S.n + '×' + S.n + ' solved in ' + S.moves + ' moves. Par is ' + par + '.')
+        + (used ? ' Hints used: ' + used + '.' : ' No hints used.');
+    }
+  }
+
+  function press(i){
+    if (S.won) return;
+    S.state ^= EFFECT[i];
+    S.moves++;
+    if (i === S.hinted) S.hinted = -1; // hint followed, clear the marker
+    const flipped = [i, ...LINKS[i]];
+    S.log = 'N<b>' + name(i) + '</b> flipped ' + flipped.map(name).join(', ');
+    const stagger = {}; LINKS[i].forEach((j, k) => stagger[j] = 90 + k*70);
+    tone(!!((S.state >> BigInt(i)) & 1n));
+    render(stagger);
+    if (S.state === ALL){
+      S.won = true;
+      board.classList.add('won');
+      fanfare();
+      setTimeout(render, 1100);
+    }
+  }
+
+  // Scramble backwards from all-lit, so every scrambled board is solvable.
+  function scramble(){
+    let s, tries = 0;
+    do {
+      s = ALL;
+      for (let i = 0; i < CELLS; i++) if (Math.random() < 0.5) s ^= EFFECT[i];
+      tries++;
+    } while ((s === ALL || pop(solve(s)) < Math.min(3, CELLS - 1)) && tries < 200);
+    return s;
+  }
+
+  function reset(){
+    S.state = S.start; S.moves = 0; S.log = ''; S.won = false;
+    S.hintsLeft = MAX_HINTS; S.hinted = -1;
+    par = pop(solve(S.start));
+    render();
+  }
+  function newPuzzle(){ S.start = S.mode === 'dark' ? 0n : scramble(); reset(); }
+  function setSize(n){
+    n = Math.max(MIN, Math.min(MAX, Math.round(Number(n)) || 3));
+    S.n = n; layout(); newPuzzle();
+  }
+
+  $('size-dec').onclick = () => setSize(S.n - 1);
+  $('size-inc').onclick = () => setSize(S.n + 1);
+  $('size-input').addEventListener('change', e => setSize(e.target.value));
+  $('size-input').addEventListener('keydown', e => { if (e.key === 'Enter') setSize(e.target.value); });
+  $('retry').onclick = reset;
+  $('win-retry').onclick = reset;
+  $('win-new').onclick = () => { if (S.mode === 'dark') S.mode = 'mix'; newPuzzle(); };
+  $('win-bigger').onclick = () => setSize(S.n + 1);
+  $('mode-dark').onclick = () => { S.mode = 'dark'; newPuzzle(); };
+  $('mode-mix').onclick = () => { S.mode = 'mix'; newPuzzle(); };
+  $('sound').onclick = () => { S.soundOn = !S.soundOn; render(); };
+  // Hint = one next step from the shortest solution of the CURRENT board.
+  // Max 2 per puzzle. An unused hint stays marked and pressing Hint again re-flashes it for free.
+  function flash(i){
+    cells[i].classList.remove('hint'); void cells[i].offsetWidth;
+    cells[i].classList.add('hint');
+    setTimeout(() => cells[i].classList.remove('hint'), 1900);
+  }
+  $('hint').onclick = () => {
+    if (S.won) return;
+    if (S.hinted >= 0 && ((solution >> BigInt(S.hinted)) & 1n)){ flash(S.hinted); return; }
+    if (S.hintsLeft === 0){ S.log = 'No hints left for this puzzle.'; render(); return; }
+    const picks = []; for (let i = 0; i < CELLS; i++) if ((solution >> BigInt(i)) & 1n) picks.push(i);
+    if (!picks.length) return;
+    const i = picks[Math.floor(Math.random() * picks.length)];
+    S.hintsLeft--; S.hinted = i;
+    S.log = 'Hint ' + (MAX_HINTS - S.hintsLeft) + ' of ' + MAX_HINTS + ': tap <b>' + name(i) + '</b>'
+      + (S.hintsLeft ? '' : '. That was your last hint.');
+    render(); flash(i);
+  };
+
+  layout(); newPuzzle();
+})();
+</script>
+</body>
+</html>
